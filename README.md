@@ -26,9 +26,12 @@ Downloads a ZIP your 税理士 can open:
 
 ## Email verify
 
-1. Create account (top right)
-2. Verify via email (Resend) — local: link written to `data/mail/` and shown in UI
-3. Then log in
+Sending domain: **support.cryptozei.com** (Resend / DNS confirmed).
+
+1. Set `RESEND_API_KEY` and keep `EMAIL_FROM=ZEI <noreply@support.cryptozei.com>`
+2. Optional: `EMAIL_REPLY_TO=support@cryptozei.com`
+3. Create account (top right) → verify via email
+4. Local without Resend: link written to `data/mail/` and shown in UI
 
 Also: forgot password + reset page `/reset?token=…`
 
@@ -36,14 +39,14 @@ Also: forgot password + reset page `/reset?token=…`
 
 | Need | Best option | Env |
 |------|-------------|-----|
-| Transactional email | **Resend** | `RESEND_API_KEY`, `EMAIL_FROM` |
+| Transactional email | **Resend** (`support.cryptozei.com`) | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` |
 | App URL in emails | — | `APP_BASE_URL` |
 | Auth secret | — | `AUTH_SECRET` |
 | ETH + ERC-20 | **Etherscan** | `ETHERSCAN_API_KEY` |
 | BTC | blockchain.info | — |
 | JPY fallback | CoinGecko | — |
-| Japan exchanges | user API keys in UI | — |
-| Crypto checkout | **NOWPayments** | `NOWPAYMENTS_*` |
+| Japan exchanges (read-only API) | bitFlyer, Coincheck, GMO, bitbank, Binance JP, Zaif | pasted in UI; never stored |
+| Pro checkout | **USDC QR** (ETH + L2s via Etherscan) | `USDC_RECEIVE_ADDRESS`, `ETHERSCAN_API_KEY`, `ZEI_PRO_PRICE_USDC` |
 
 ## Run
 
@@ -53,6 +56,14 @@ cp .env.example .env.local
 npm install
 npm run dev
 ```
+
+## Pro payment (USDC QR)
+
+1. Set `USDC_RECEIVE_ADDRESS` to your wallet (same address on ETH + L2s)
+2. Keep `ETHERSCAN_API_KEY` set (multichain V2)
+3. User pays **exact** USDC amount shown (≈20 USDC + unique micros for matching)
+4. Ref code looks like `ZEI:username:abcd1234` — put in memo if wallet allows
+5. Click **I’ve paid — check** → ZEI scans ETH, Base, Arbitrum, Optimism, Polygon, Avalanche, Linea (Etherscan V2)
 
 ## Notes
 

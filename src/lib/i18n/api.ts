@@ -20,7 +20,7 @@ export const apiMessages = {
     login_required: "ログインが必要です。",
     verify_before_save: "保存前にメール確認が必要です。",
     pro_required:
-      "クラウド保存にはProプランが必要です。暗号資産で決済して解除してください。",
+      "クラウド保存にはProプランが必要です。USDCで決済して解除してください。",
     payment_failed: "決済に失敗しました。",
     wallet_address_required: "ウォレットアドレスが必要です。",
     exchange_creds_required: "取引所・APIキー・シークレットが必要です。",
@@ -48,7 +48,7 @@ export const apiMessages = {
     login_required: "Login required.",
     verify_before_save: "Verify your email before saving.",
     pro_required:
-      "Pro plan required to save cloud ledger. Pay with crypto to unlock.",
+      "Pro plan required to save cloud ledger. Pay with USDC to unlock.",
     payment_failed: "Payment failed.",
     wallet_address_required: "Wallet address is required.",
     exchange_creds_required: "exchange, apiKey, and apiSecret are required.",

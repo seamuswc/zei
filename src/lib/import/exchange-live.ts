@@ -14,13 +14,26 @@ function toDate(ts: number | string): string {
   return d.toISOString().slice(0, 10);
 }
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 /** bitFlyer private GET with HMAC headers. */
 export async function fetchBitflyerExecutions(
   apiKey: string,
   apiSecret: string,
-  productCodes: string[] = ["BTC_JPY", "ETH_JPY", "XRP_JPY", "SOL_JPY"],
+  productCodes: string[] = [
+    "BTC_JPY",
+    "ETH_JPY",
+    "XRP_JPY",
+    "SOL_JPY",
+    "DOT_JPY",
+    "XLM_JPY",
+    "MONA_JPY",
+  ],
 ): Promise<CryptoTx[]> {
   const txs: CryptoTx[] = [];
+  let authFailed: string | null = null;
 
   for (const product of productCodes) {
     const path = `/v1/me/getexecutions?product_code=${product}&count=500`;
@@ -39,9 +52,11 @@ export async function fetchBitflyerExecutions(
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(
-        `bitFlyer ${product}: HTTP ${res.status} ${body.slice(0, 200)}`,
-      );
+      if (res.status === 401 || res.status === 403) {
+        authFailed = `bitFlyer: HTTP ${res.status} ${body.slice(0, 200)}`;
+        break;
+      }
+      continue;
     }
 
     const rows = (await res.json()) as Array<{
@@ -77,9 +92,54 @@ export async function fetchBitflyerExecutions(
         note: `${product} exec #${row.id}`,
       });
     }
+    await sleep(120);
+  }
+
+  if (authFailed) throw new Error(authFailed);
+  if (txs.length === 0) {
+    throw new Error(
+      "bitFlyer returned no executions. Enable read-only trade history, or upload CSV.",
+    );
   }
 
   return txs.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Warn if bitFlyer key can trade/withdraw (not read-only). */
+export async function checkBitflyerReadOnly(
+  apiKey: string,
+  apiSecret: string,
+): Promise<{ ok: boolean; warning?: string }> {
+  const path = "/v1/me/getpermissions";
+  const timestamp = Date.now().toString();
+  const sign = createHmac("sha256", apiSecret)
+    .update(`${timestamp}GET${path}`)
+    .digest("hex");
+  const res = await fetch(`https://api.bitflyer.com${path}`, {
+    headers: {
+      "ACCESS-KEY": apiKey,
+      "ACCESS-TIMESTAMP": timestamp,
+      "ACCESS-SIGN": sign,
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) return { ok: true };
+  const perms = (await res.json()) as string[];
+  if (!Array.isArray(perms)) return { ok: true };
+  const risky = perms.filter(
+    (p) =>
+      /sendchildorder|cancelchildorder|cancelall|withdraw|sendcoin|deposit/i.test(
+        p,
+      ),
+  );
+  if (risky.length) {
+    return {
+      ok: false,
+      warning:
+        "This bitFlyer key can trade or withdraw. Create a read-only key (history/balance only).",
+    };
+  }
+  return { ok: true };
 }
 
 /** Coincheck order transactions (JPY pairs). */
@@ -148,39 +208,67 @@ export async function fetchCoincheckTransactions(
     });
   }
 
+  if (txs.length === 0) {
+    throw new Error(
+      "Coincheck returned no trades. Enable read-only「取引履歴」permission, or upload CSV.",
+    );
+  }
+
   return txs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** GMO Coin (coin.z.com) latest executions. */
+async function gmoPrivateGet(
+  apiKey: string,
+  apiSecret: string,
+  path: string,
+  query: string,
+): Promise<Response> {
+  // GMO signs path WITHOUT query string (see official samples).
+  const timestamp = Date.now().toString();
+  const method = "GET";
+  const text = timestamp + method + path;
+  const sign = createHmac("sha256", apiSecret).update(text).digest("hex");
+  return fetch(`https://api.coin.z.com/private${path}${query}`, {
+    headers: {
+      "API-KEY": apiKey,
+      "API-TIMESTAMP": timestamp,
+      "API-SIGN": sign,
+    },
+    cache: "no-store",
+  });
+}
+
+/** GMO Coin (coin.z.com) latest executions (recent window; CSV for full year). */
 export async function fetchGmoExecutions(
   apiKey: string,
   apiSecret: string,
-  symbols: string[] = ["BTC", "ETH", "XRP", "SOL", "BTC_JPY", "ETH_JPY"],
+  symbols: string[] = [
+    "BTC",
+    "ETH",
+    "XRP",
+    "LTC",
+    "BCH",
+    "SOL",
+    "DOT",
+    "ADA",
+    "DOGE",
+    "XLM",
+  ],
 ): Promise<CryptoTx[]> {
   const txs: CryptoTx[] = [];
+  let authFailed: string | null = null;
 
   for (const symbol of symbols) {
-    const path = `/v1/latestExecutions?symbol=${encodeURIComponent(symbol)}&page=1&count=100`;
-    const timestamp = Date.now().toString();
-    const method = "GET";
-    const text = timestamp + method + path;
-    const sign = createHmac("sha256", apiSecret).update(text).digest("hex");
-
-    const res = await fetch(`https://api.coin.z.com/private${path}`, {
-      headers: {
-        "API-KEY": apiKey,
-        "API-TIMESTAMP": timestamp,
-        "API-SIGN": sign,
-      },
-      cache: "no-store",
-    });
+    const path = `/v1/latestExecutions`;
+    const query = `?symbol=${encodeURIComponent(symbol)}&page=1&count=100`;
+    const res = await gmoPrivateGet(apiKey, apiSecret, path, query);
 
     if (res.status === 404 || res.status === 400) continue;
     if (!res.ok) {
       const body = await res.text();
-      // Some symbols invalid — skip soft errors
       if (res.status === 403 || res.status === 401) {
-        throw new Error(`GMO Coin auth error: ${body.slice(0, 200)}`);
+        authFailed = `GMO Coin auth error: ${body.slice(0, 200)}`;
+        break;
       }
       continue;
     }
@@ -190,6 +278,7 @@ export async function fetchGmoExecutions(
       data?: {
         list?: Array<{
           orderId?: number;
+          executionId?: number;
           symbol: string;
           side: string;
           settleType?: string;
@@ -200,7 +289,6 @@ export async function fetchGmoExecutions(
           timestamp: string;
         }>;
       };
-      messages?: Array<{ message_string?: string }>;
     };
 
     if (data.status !== 0 && data.status !== undefined) continue;
@@ -228,14 +316,16 @@ export async function fetchGmoExecutions(
         priceSource: "exchange_fill",
         source: "exchange",
         exchange: "GMO Coin",
-        note: `${row.symbol} order ${row.orderId ?? ""}`.trim(),
+        note: `${row.symbol} exec ${row.executionId ?? row.orderId ?? ""}`.trim(),
       });
     }
+    await sleep(120);
   }
 
+  if (authFailed) throw new Error(authFailed);
   if (txs.length === 0) {
     throw new Error(
-      "GMO Coin returned no executions. Check key permissions / symbols, or use CSV.",
+      "GMO Coin returned no recent executions (API covers a short window). Use CSV for full-year history.",
     );
   }
 
@@ -246,21 +336,36 @@ export async function fetchGmoExecutions(
 export async function fetchBitbankTrades(
   apiKey: string,
   apiSecret: string,
-  pairs: string[] = ["btc_jpy", "eth_jpy", "xrp_jpy", "sol_jpy"],
+  pairs: string[] = [
+    "btc_jpy",
+    "eth_jpy",
+    "xrp_jpy",
+    "ltc_jpy",
+    "bcc_jpy",
+    "mona_jpy",
+    "xlm_jpy",
+    "qtum_jpy",
+    "bat_jpy",
+    "omg_jpy",
+    "link_jpy",
+    "dot_jpy",
+    "doge_jpy",
+    "astr_jpy",
+    "ada_jpy",
+    "avax_jpy",
+    "sol_jpy",
+  ],
 ): Promise<CryptoTx[]> {
   const txs: CryptoTx[] = [];
+  let authFailed: string | null = null;
 
   for (const pair of pairs) {
     const path = `/v1/user/spot/trade_history`;
     const query = `pair=${pair}`;
     const nonce = Date.now().toString();
-    const message = nonce + path + "?" + query; // bitbank: nonce + path for GET sometimes without body
-    // Official: ACCESS-SIGNATURE = HMAC-SHA256(secret, nonce + path + requestBody)
-    // For GET with query, body is empty and path includes ?query in some clients.
-    // bitbank docs: message = nonce + "/v1/..." + body; query is separate in URL.
-    const signPath = path; // path without query per common bitbank clients
+    // Official: GET signature = HMAC(nonce + full path WITH query)
     const sign = createHmac("sha256", apiSecret)
-      .update(nonce + signPath)
+      .update(`${nonce}${path}?${query}`)
       .digest("hex");
 
     const res = await fetch(`https://api.bitbank.cc${path}?${query}`, {
@@ -275,7 +380,8 @@ export async function fetchBitbankTrades(
     if (!res.ok) {
       const body = await res.text();
       if (res.status === 401 || res.status === 403) {
-        throw new Error(`bitbank auth error: ${body.slice(0, 200)}`);
+        authFailed = `bitbank auth error: ${body.slice(0, 200)}`;
+        break;
       }
       continue;
     }
@@ -295,7 +401,6 @@ export async function fetchBitbankTrades(
           executed_at: number;
         }>;
       };
-      data_code?: number;
     };
 
     if (data.success === 0) continue;
@@ -306,12 +411,13 @@ export async function fetchBitbankTrades(
       const price = Number(row.price);
       if (!qty || !price) continue;
       const asset = pair.split("_")[0].toUpperCase();
+      const normalizedAsset = asset === "BCC" ? "BCH" : asset;
       const jpyValue = Math.round(qty * price);
       const fee = Math.abs(Number(row.fee_amount_quote ?? 0));
       txs.push({
         id: uid("bb"),
         date: toDate(row.executed_at),
-        asset,
+        asset: normalizedAsset,
         side,
         quantity: qty,
         jpyValue,
@@ -323,11 +429,13 @@ export async function fetchBitbankTrades(
         note: `${row.pair} #${row.trade_id}`,
       });
     }
+    await sleep(100);
   }
 
+  if (authFailed) throw new Error(authFailed);
   if (txs.length === 0) {
     throw new Error(
-      "bitbank returned no trades. Check key permissions / pairs, or use CSV.",
+      "bitbank returned no trades. Enable read-only「照会」permission, or upload CSV.",
     );
   }
 
@@ -335,20 +443,32 @@ export async function fetchBitbankTrades(
 }
 
 /**
- * Binance Japan spot trades — same signing as Binance global, JP endpoint.
- * Requires API key with spot trade history permission.
+ * Binance Japan spot trades — same signing as Binance global.
+ * Requires API key with read / spot trade history only (no withdraw).
  */
 export async function fetchBinanceJpTrades(
   apiKey: string,
   apiSecret: string,
-  symbols: string[] = ["BTCJPY", "ETHJPY", "XRPJPY", "SOLJPY"],
+  symbols: string[] = [
+    "BTCJPY",
+    "ETHJPY",
+    "XRPJPY",
+    "SOLJPY",
+    "BNBJPY",
+    "ADAJPY",
+    "DOGEJPY",
+    "DOTJPY",
+    "MATICJPY",
+    "AVAXJPY",
+  ],
 ): Promise<CryptoTx[]> {
   const txs: CryptoTx[] = [];
-  const base = "https://api.binance.com"; // JP retail often still uses mirrored endpoints; override via env
+  const base = process.env.BINANCE_API_BASE || "https://api.binance.com";
+  let authFailed: string | null = null;
 
   for (const symbol of symbols) {
     const timestamp = Date.now();
-    const qs = `symbol=${symbol}&limit=500&timestamp=${timestamp}`;
+    const qs = `symbol=${symbol}&limit=1000&timestamp=${timestamp}`;
     const sig = createHmac("sha256", apiSecret).update(qs).digest("hex");
     const url = `${base}/api/v3/myTrades?${qs}&signature=${sig}`;
 
@@ -360,7 +480,8 @@ export async function fetchBinanceJpTrades(
     if (!res.ok) {
       const body = await res.text();
       if (res.status === 401 || res.status === 403) {
-        throw new Error(`Binance JP auth error: ${body.slice(0, 200)}`);
+        authFailed = `Binance JP auth error: ${body.slice(0, 200)}`;
+        break;
       }
       continue;
     }
@@ -401,23 +522,146 @@ export async function fetchBinanceJpTrades(
         note: `${row.symbol} #${row.id}`,
       });
     }
+    await sleep(120);
   }
 
+  if (authFailed) throw new Error(authFailed);
   if (txs.length === 0) {
     throw new Error(
-      "Binance returned no JPY trades. Use Binance Japan CSV export if keys lack history.",
+      "Binance returned no JPY trades. Use a read-only key with spot history, or Binance Japan CSV.",
     );
   }
 
   return txs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** Zaif trade history (HMAC-SHA512). */
+export async function fetchZaifTrades(
+  apiKey: string,
+  apiSecret: string,
+  pairs: string[] = [
+    "btc_jpy",
+    "eth_jpy",
+    "xem_jpy",
+    "mona_jpy",
+    "bch_jpy",
+    "fscc_jpy",
+  ],
+): Promise<CryptoTx[]> {
+  const txs: CryptoTx[] = [];
+  let authFailed: string | null = null;
+  let nonce = Date.now() / 1000;
+
+  for (const pair of pairs) {
+    nonce += 0.01;
+    const body = new URLSearchParams({
+      method: "trade_history",
+      nonce: String(nonce),
+      currency_pair: pair,
+      count: "1000",
+    });
+    const encoded = body.toString();
+    const sign = createHmac("sha512", apiSecret).update(encoded).digest("hex");
+
+    const res = await fetch("https://api.zaif.jp/tapi", {
+      method: "POST",
+      headers: {
+        Key: apiKey,
+        Sign: sign,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: encoded,
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        authFailed = `Zaif auth error: ${text.slice(0, 200)}`;
+        break;
+      }
+      continue;
+    }
+
+    const data = (await res.json()) as {
+      success?: number;
+      return?: Record<
+        string,
+        {
+          currency_pair: string;
+          action: string;
+          amount: number;
+          price: number;
+          fee?: number;
+          fee_amount?: number;
+          timestamp: number;
+        }
+      >;
+      error?: string;
+    };
+
+    if (data.success === 0) {
+      const err = data.error || "";
+      if (/key|sign|permission|認証|権限/i.test(err)) {
+        authFailed = `Zaif: ${err}`;
+        break;
+      }
+      continue;
+    }
+
+    for (const [id, row] of Object.entries(data.return ?? {})) {
+      const side = row.action === "bid" || row.action === "buy" ? "buy" : "sell";
+      const qty = Number(row.amount);
+      const price = Number(row.price);
+      if (!qty || !price) continue;
+      const asset = pair.split("_")[0].toUpperCase();
+      const fee = Math.abs(Number(row.fee_amount ?? row.fee ?? 0));
+      // Zaif fee on JPY pairs is often in the base asset; treat small JPY-like fees as JPY.
+      const feeJpy = fee > 1 ? Math.round(fee) : undefined;
+      txs.push({
+        id: uid(`zf_${id}`),
+        date: toDate(row.timestamp),
+        asset,
+        side,
+        quantity: qty,
+        jpyValue: Math.round(qty * price),
+        feeJpy,
+        unitPriceJpy: price,
+        priceSource: "exchange_fill",
+        source: "exchange",
+        exchange: "Zaif",
+        note: `${row.currency_pair} #${id}`,
+      });
+    }
+    await sleep(250);
+  }
+
+  if (authFailed) throw new Error(authFailed);
+  if (txs.length === 0) {
+    throw new Error(
+      "Zaif returned no trades. Enable info/trade history only (no order/withdraw), or upload CSV.",
+    );
+  }
+
+  return txs.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export type ExchangePermKey =
+  | "exchange_perm_bitflyer"
+  | "exchange_perm_coincheck"
+  | "exchange_perm_gmo"
+  | "exchange_perm_bitbank"
+  | "exchange_perm_binance"
+  | "exchange_perm_zaif";
+
 export interface ExchangeDef {
   id: string;
   name: string;
   region: string;
-  blurb: string;
   live: boolean;
+  permKey: ExchangePermKey;
+  docsUrl: string;
+  historyNoteKey?: "exchange_hist_gmo";
 }
 
 export const EXCHANGES: ExchangeDef[] = [
@@ -425,36 +669,50 @@ export const EXCHANGES: ExchangeDef[] = [
     id: "bitflyer",
     name: "bitFlyer",
     region: "Japan",
-    blurb: "Live API — read-only key + secret.",
     live: true,
+    permKey: "exchange_perm_bitflyer",
+    docsUrl: "https://lightning.bitflyer.com/developer",
   },
   {
     id: "coincheck",
     name: "Coincheck",
     region: "Japan",
-    blurb: "Live API — read-only key + secret.",
     live: true,
+    permKey: "exchange_perm_coincheck",
+    docsUrl: "https://coincheck.com/ja/documents/exchange/api",
   },
   {
     id: "gmo",
     name: "GMO Coin",
     region: "Japan",
-    blurb: "Live API — API key + secret (latest executions).",
     live: true,
+    permKey: "exchange_perm_gmo",
+    docsUrl: "https://api.coin.z.com/docs/",
+    historyNoteKey: "exchange_hist_gmo",
   },
   {
     id: "bitbank",
     name: "bitbank",
     region: "Japan",
-    blurb: "Live API — key + secret (spot trade history).",
     live: true,
+    permKey: "exchange_perm_bitbank",
+    docsUrl: "https://github.com/bitbankinc/bitbank-api-docs",
   },
   {
     id: "binance-jp",
     name: "Binance Japan",
     region: "Japan",
-    blurb: "Live API attempt (JPY pairs) — CSV fallback if empty.",
     live: true,
+    permKey: "exchange_perm_binance",
+    docsUrl: "https://www.binance.com/en/support/faq",
+  },
+  {
+    id: "zaif",
+    name: "Zaif",
+    region: "Japan",
+    live: true,
+    permKey: "exchange_perm_zaif",
+    docsUrl: "https://zaif-api-document.readthedocs.io/",
   },
 ];
 
@@ -462,18 +720,25 @@ export async function fetchExchangeLive(
   exchange: string,
   apiKey: string,
   apiSecret: string,
-): Promise<CryptoTx[]> {
+): Promise<{ txs: CryptoTx[]; warning?: string }> {
+  let warning: string | undefined;
+
   switch (exchange) {
-    case "bitflyer":
-      return fetchBitflyerExecutions(apiKey, apiSecret);
+    case "bitflyer": {
+      const check = await checkBitflyerReadOnly(apiKey, apiSecret);
+      if (!check.ok) warning = check.warning;
+      return { txs: await fetchBitflyerExecutions(apiKey, apiSecret), warning };
+    }
     case "coincheck":
-      return fetchCoincheckTransactions(apiKey, apiSecret);
+      return { txs: await fetchCoincheckTransactions(apiKey, apiSecret) };
     case "gmo":
-      return fetchGmoExecutions(apiKey, apiSecret);
+      return { txs: await fetchGmoExecutions(apiKey, apiSecret) };
     case "bitbank":
-      return fetchBitbankTrades(apiKey, apiSecret);
+      return { txs: await fetchBitbankTrades(apiKey, apiSecret) };
     case "binance-jp":
-      return fetchBinanceJpTrades(apiKey, apiSecret);
+      return { txs: await fetchBinanceJpTrades(apiKey, apiSecret) };
+    case "zaif":
+      return { txs: await fetchZaifTrades(apiKey, apiSecret) };
     default:
       throw new Error("Unsupported exchange for live sync.");
   }

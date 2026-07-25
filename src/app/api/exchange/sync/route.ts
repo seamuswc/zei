@@ -20,13 +20,18 @@ export async function POST(req: Request) {
       return apiJsonError(req, "exchange_creds_required", 400);
     }
 
-    // Never log secrets
-    const txs = await fetchExchangeLive(exchange, apiKey, apiSecret);
+    // Never log or persist secrets — one-shot sync only
+    const { txs, warning } = await fetchExchangeLive(
+      exchange,
+      apiKey,
+      apiSecret,
+    );
 
     return NextResponse.json({
       exchange,
       count: txs.length,
       txs,
+      warning,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Exchange sync failed";

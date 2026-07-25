@@ -31,17 +31,15 @@ export const messages = {
     hero_row_crypto_only: "暗号のみ",
     hero_row_net: "ネット",
     hero_stamp: "移動平均法",
-    exchange_blurb: "ライブAPI — 読み取り専用のキーとシークレット。",
-
     import_kicker: "データを取り込む",
     import_title: "CSV・ウォレット・取引所",
     import_sub:
       "価格の優先順：取引所約定 → オンチェーン／公開価格 → CoinGecko → 確認画面で手動。ラップは非課税です。",
 
     csv_kicker: "01 · スプレッドシート",
-    csv_title: "CSVをアップロード",
+    csv_title: "CSV / Excelをアップロード",
     csv_desc:
-      "取引所のエクスポートや手記帳に対応。buy/sell、transfer、income、fee、wrap、bridge、trade（counter_asset / counter_qty）をサポート。",
+      "取引所のエクスポートや手記帳に対応。APIキーが使えないときはこちら。buy/sell、transfer、income、fee、wrap、bridge、trade をサポート。",
     csv_drop: "CSVをドロップ",
     csv_drop_sub: "またはクリックして選択 · .csv / .txt",
     csv_sample: "サンプルCSVを読込",
@@ -62,16 +60,34 @@ export const messages = {
       "EthereumにはEtherscanキーが必要です（またはサーバー環境変数 ETHERSCAN_API_KEY）。",
     wallet_linked: "接続済み: {address}",
 
-    exchange_kicker: "03 · 取引所 · ライブ",
-    exchange_title: "取引所を連携",
+    exchange_kicker: "03 · 取引所 · 読み取り専用API",
+    exchange_title: "取引所を連携（かんたん）",
     exchange_desc:
-      "bitFlyer / Coincheck / GMOコイン / bitbank / Binance JP に対応。読み取り専用キーを使用。秘密鍵は保存しません。",
-    exchange_label: "取引所",
-    exchange_key: "APIキー",
+      "Excel/CSVでもOK。かんたんにするなら読み取り専用APIキー。出金・注文権限は絶対に付けないでください。キーは保存しません（この同期だけ使用）。",
+    exchange_readonly_title: "必ず読み取り専用キーを使う",
+    exchange_readonly_body:
+      "APIキー発行時は「照会／履歴／残高」のみON。「注文・取引・出金・送付」はすべてOFF。ZEIは秘密鍵をサーバーに保存しません。",
+    exchange_label: "日本の取引所",
+    exchange_key: "APIキー（読み取り専用）",
     exchange_secret: "APIシークレット",
-    exchange_connect: "ライブ接続",
+    exchange_connect: "読み取り同期",
     exchange_syncing: "同期中…",
     exchange_linked: "連携済み",
+    exchange_docs: "権限のヘルプ",
+    exchange_csv_alt: "年間フル履歴は左のCSVアップロードも使えます。",
+    exchange_synced: "{name} · {n}件を取り込みました",
+    exchange_perm_bitflyer:
+      "bitFlyer: 「資産・取引履歴の参照」のみ。注文・出金はOFF。",
+    exchange_perm_coincheck:
+      "Coincheck: 「取引情報の参照／残高」のみ。注文・出金はOFF。",
+    exchange_perm_gmo:
+      "GMOコイン: 「取引履歴・資産」の参照のみ。注文・出金はOFF。",
+    exchange_perm_bitbank: "bitbank: 「照会」のみ。注文・出金はOFF。",
+    exchange_perm_binance:
+      "Binance Japan: Enable Reading のみ。Trading・Withdrawals はOFF。",
+    exchange_perm_zaif: "Zaif: 情報取得のみ。注文・出金権限は付けない。",
+    exchange_hist_gmo:
+      "注意: GMOのAPIは直近の約定が中心です。年間フル履歴はCSVも併用してください。",
 
     income_kicker: "暗号資産のみ",
     income_title: "任意：他の所得（税率の目安用）",
@@ -165,8 +181,27 @@ export const messages = {
     auth_creating: "…",
     auth_verified: "確認済み",
     auth_unverified: "未確認",
-    auth_pay: "暗号資産でPro決済",
+    auth_pay: "USDCでPro（20）",
     auth_save: "台帳を保存",
+    pay_title: "USDCでProを購入",
+    pay_close: "閉じる",
+    pay_lead:
+      "下のQRまたはアドレスに、表示の金額ぴったりでUSDCを送金してください。Ethereumおよび主要L2に対応。",
+    pay_amount: "送金額（ぴったりの金額）",
+    pay_address: "受取アドレス",
+    pay_ref: "照合用メモ（ユーザー情報）",
+    pay_ref_hint:
+      "ウォレットにメモ欄があればこの参照コードを入れてください。照合は主に金額で行います。",
+    pay_chains: "対応チェーン",
+    pay_exact_warn:
+      "端数まで含めた金額を正確に送ってください（あなた専用の照合用金額です）。",
+    pay_check: "支払いを確認",
+    pay_checking: "チェーンを確認中…",
+    pay_waiting: "まだ検出されていません。送金後1分ほど待って再確認してください。",
+    pay_confirmed: "支払い確認: {chain} · {tx}",
+    pay_copy: "コピー",
+    pay_copied: "コピー済み",
+    pay_dev_confirm: "開発用：支払い済みにする",
     auth_logout: "ログアウト",
     auth_dev_link: "開発用確認リンク:",
     auth_click_verify: "クリックして確認",
@@ -262,17 +297,15 @@ export const messages = {
     hero_row_crypto_only: "Crypto only",
     hero_row_net: "Net",
     hero_stamp: "Moving average",
-    exchange_blurb: "Live API — read-only key + secret.",
-
     import_kicker: "Bring data in",
     import_title: "CSV, live wallet, live exchange",
     import_sub:
       "Price order: exchange fill → on-chain/public quote → CoinGecko → manual in Review. Wraps are not taxed.",
 
     csv_kicker: "01 · Spreadsheet",
-    csv_title: "Upload CSV",
+    csv_title: "Upload CSV / Excel export",
     csv_desc:
-      "Supports buy/sell, transfer_in/out, income, fee, wrap, bridge, and trade (+ counter_asset, counter_qty).",
+      "Exchange exports or manual books. Use this if you prefer not to use an API key. Supports buy/sell, transfer, income, fee, wrap, bridge, trade.",
     csv_drop: "Drop CSV here",
     csv_drop_sub: "or click to browse · .csv / .txt",
     csv_sample: "Load sample CSV",
@@ -293,16 +326,36 @@ export const messages = {
       "Ethereum needs an Etherscan key here, or set ETHERSCAN_API_KEY in the server env.",
     wallet_linked: "Linked: {address}",
 
-    exchange_kicker: "03 · Exchange · live",
-    exchange_title: "Link exchange",
+    exchange_kicker: "03 · Exchange · read-only API",
+    exchange_title: "Link exchange (easiest)",
     exchange_desc:
-      "Live APIs for bitFlyer, Coincheck, GMO Coin, bitbank, Binance JP. Use read-only keys. Secrets are not stored.",
-    exchange_label: "Exchange",
-    exchange_key: "API key",
+      "CSV/Excel works too. Easier: paste a read-only exchange API key. Never enable trade or withdraw. Keys are not stored — used only for this sync.",
+    exchange_readonly_title: "Read-only API keys only",
+    exchange_readonly_body:
+      "When creating a key, enable view/history/balance only. Turn OFF order, trade, withdraw, and send. ZEI never stores your secret.",
+    exchange_label: "Japan exchange",
+    exchange_key: "API key (read-only)",
     exchange_secret: "API secret",
-    exchange_connect: "Connect live",
-    exchange_syncing: "Syncing live…",
+    exchange_connect: "Sync read-only",
+    exchange_syncing: "Syncing…",
     exchange_linked: "Linked",
+    exchange_docs: "Permission help",
+    exchange_csv_alt: "For full-year history you can also upload CSV (left panel).",
+    exchange_synced: "{name} · imported {n} rows",
+    exchange_perm_bitflyer:
+      "bitFlyer: enable asset/trade history read only. No order or withdraw.",
+    exchange_perm_coincheck:
+      "Coincheck: enable transaction/balance read only. No order or withdraw.",
+    exchange_perm_gmo:
+      "GMO Coin: enable trade-history/assets read only. No order or withdraw.",
+    exchange_perm_bitbank:
+      "bitbank: enable 照会 (read) only. No order or withdraw.",
+    exchange_perm_binance:
+      "Binance Japan: Enable Reading only. Disable Trading and Withdrawals.",
+    exchange_perm_zaif:
+      "Zaif: info/history only. Do not enable order or withdraw.",
+    exchange_hist_gmo:
+      "Note: GMO’s API mainly covers recent fills. Use CSV for a full tax year.",
 
     income_kicker: "Crypto only",
     income_title: "Optional: other income for a rough rate check",
@@ -396,8 +449,27 @@ export const messages = {
     auth_creating: "…",
     auth_verified: "Verified",
     auth_unverified: "Unverified",
-    auth_pay: "Pay crypto (Pro)",
+    auth_pay: "Pay USDC (Pro · 20)",
     auth_save: "Save ledger",
+    pay_title: "Pay Pro with USDC",
+    pay_close: "Close",
+    pay_lead:
+      "Scan the QR or send USDC to the address for the exact amount shown. Works on Ethereum and major L2s.",
+    pay_amount: "Exact amount",
+    pay_address: "Receive address",
+    pay_ref: "Your payment ref (username)",
+    pay_ref_hint:
+      "Paste this ref in the wallet memo if available. Matching is primarily by the exact amount.",
+    pay_chains: "Supported chains",
+    pay_exact_warn:
+      "Send the exact amount including decimals — it uniquely identifies your payment.",
+    pay_check: "I’ve paid — check",
+    pay_checking: "Checking chains…",
+    pay_waiting: "Not seen yet. Wait ~1 minute after sending, then check again.",
+    pay_confirmed: "Paid on {chain} · {tx}",
+    pay_copy: "Copy",
+    pay_copied: "Copied",
+    pay_dev_confirm: "Dev: mark paid",
     auth_logout: "Log out",
     auth_dev_link: "Dev verify link:",
     auth_click_verify: "click to verify",

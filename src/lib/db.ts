@@ -8,13 +8,30 @@ const dbPath = path.join(dataDir, "zei.db");
 let _db: Database.Database | null = null;
 
 function migrate(db: Database.Database) {
-  const cols = db
+  const userCols = db
     .prepare(`PRAGMA table_info(users)`)
     .all() as Array<{ name: string }>;
-  const names = new Set(cols.map((c) => c.name));
-  if (!names.has("email_verified_at")) {
+  const userNames = new Set(userCols.map((c) => c.name));
+  if (!userNames.has("email_verified_at")) {
     db.exec(`ALTER TABLE users ADD COLUMN email_verified_at TEXT`);
   }
+
+  const payCols = db
+    .prepare(`PRAGMA table_info(payments)`)
+    .all() as Array<{ name: string }>;
+  const payNames = new Set(payCols.map((c) => c.name));
+  if (payCols.length > 0) {
+    if (!payNames.has("amount_raw")) {
+      db.exec(`ALTER TABLE payments ADD COLUMN amount_raw TEXT`);
+    }
+    if (!payNames.has("ref_code")) {
+      db.exec(`ALTER TABLE payments ADD COLUMN ref_code TEXT`);
+    }
+    if (!payNames.has("tx_hash")) {
+      db.exec(`ALTER TABLE payments ADD COLUMN tx_hash TEXT`);
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS email_tokens (
       token_hash TEXT PRIMARY KEY,
@@ -77,7 +94,10 @@ export function getDb(): Database.Database {
       currency TEXT,
       status TEXT NOT NULL,
       raw_json TEXT,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      amount_raw TEXT,
+      ref_code TEXT,
+      tx_hash TEXT
     );
 
     CREATE TABLE IF NOT EXISTS email_tokens (

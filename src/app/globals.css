@@ -790,6 +790,126 @@ select {
   color: var(--ink-soft);
 }
 
+.pay-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 31, 42, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.pay-sheet {
+  width: min(440px, 100%);
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.pay-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.pay-sheet__head h2 {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.pay-sheet__body {
+  padding: 1.1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pay-lead {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.pay-qr {
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.pay-facts {
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pay-facts dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.pay-facts dd {
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pay-facts code {
+  font-size: 0.88rem;
+  word-break: break-all;
+}
+
+.pay-addr {
+  font-size: 0.78rem !important;
+}
+
+.readonly-banner {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in oklab, #b45309 40%, var(--line));
+  background: color-mix(in oklab, #f59e0b 12%, white);
+  color: #7a4a08;
+}
+
+.readonly-banner strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 0.35rem;
+}
+
+.readonly-banner p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.exchange-guide {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.exchange-docs {
+  font-size: 0.85rem;
+  color: var(--jade-deep);
+  text-decoration: underline;
+  width: fit-content;
+}
+
+.import-panel--exchange .status-warn {
+  margin: 0;
+}
+
 .preset-row {
   display: flex;
   flex-wrap: wrap;

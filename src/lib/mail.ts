@@ -20,7 +20,9 @@ export async function sendEmail(options: {
 }): Promise<MailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from =
-    process.env.EMAIL_FROM || "ZEI <onboarding@resend.dev>";
+    process.env.EMAIL_FROM || "ZEI <noreply@support.cryptozei.com>";
+  const replyTo =
+    process.env.EMAIL_REPLY_TO || "support@cryptozei.com";
 
   if (apiKey) {
     const res = await fetch("https://api.resend.com/emails", {
@@ -31,6 +33,7 @@ export async function sendEmail(options: {
       },
       body: JSON.stringify({
         from,
+        reply_to: replyTo,
         to: [options.to],
         subject: options.subject,
         text: options.text,

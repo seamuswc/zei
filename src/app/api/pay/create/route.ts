@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { createCryptoInvoice } from "@/lib/payments";
+import { createUsdcInvoice } from "@/lib/payments";
 import { apiJsonError, localizeThrown } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
@@ -10,8 +10,11 @@ export async function POST(req: Request) {
   if (!user) {
     return apiJsonError(req, "login_required", 401);
   }
+  if (!user.emailVerified && process.env.REQUIRE_EMAIL_VERIFY !== "0") {
+    return apiJsonError(req, "verify_before_save", 403);
+  }
   try {
-    const invoice = await createCryptoInvoice({
+    const invoice = await createUsdcInvoice({
       userId: user.id,
       email: user.email,
     });

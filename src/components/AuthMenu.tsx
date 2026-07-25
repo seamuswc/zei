@@ -5,6 +5,7 @@ import type { CryptoTx } from "@/lib/tax/types";
 import type { YearCarryRow } from "@/lib/tax/loss-carry";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
+import { PayUsdcModal, type UsdcInvoiceClient } from "./PayUsdcModal";
 
 type User = {
   id: string;
@@ -32,6 +33,7 @@ export function AuthMenu() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [devLink, setDevLink] = useState<string | null>(null);
+  const [invoice, setInvoice] = useState<UsdcInvoiceClient | null>(null);
 
   async function refreshMe() {
     const res = await fetch("/api/auth/me");
@@ -168,12 +170,19 @@ export function AuthMenu() {
     setMsg(null);
     try {
       const res = await fetch("/api/pay/create", { method: "POST" });
-      const data = (await res.json()) as {
-        error?: string;
-        invoiceUrl?: string;
-      };
+      const data = (await res.json()) as UsdcInvoiceClient & { error?: string };
       if (!res.ok) throw new Error(data.error || "Payment failed");
-      if (data.invoiceUrl) window.location.href = data.invoiceUrl;
+      setInvoice({
+        paymentId: data.paymentId,
+        address: data.address,
+        amountUsdc: data.amountUsdc,
+        ref: data.ref,
+        qrDataUrl: data.qrDataUrl,
+        eip681: data.eip681,
+        chains: data.chains,
+        allowDevConfirm: data.allowDevConfirm,
+      });
+      setOpen(false);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Payment failed");
     } finally {
@@ -183,6 +192,16 @@ export function AuthMenu() {
 
   return (
     <div className="auth-menu">
+      {invoice && (
+        <PayUsdcModal
+          invoice={invoice}
+          onClose={() => setInvoice(null)}
+          onPaid={() => {
+            void refreshMe();
+            setTimeout(() => setInvoice(null), 1800);
+          }}
+        />
+      )}
       <button
         type="button"
         className="btn btn--solid btn--sm"
@@ -321,7 +340,17 @@ export function AuthMenu() {
               </div>
             </>
           )}
-          {msg && <p className="status-ok">{msg}</p>}
+          {msg && (
+            <p
+              className={
+                /fail|error|失敗|必要|missing|invalid|無効/i.test(msg)
+                  ? "status-err-line"
+                  : "status-ok"
+              }
+            >
+              {msg}
+            </p>
+          )}
           {devLink && (
             <p className="field-hint">
               {t("auth_dev_link")}{" "}
