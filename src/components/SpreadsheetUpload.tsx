@@ -3,9 +3,11 @@
 import { useRef, useState } from "react";
 import { parseSpreadsheetCsv, SAMPLE_CSV } from "@/lib/import/csv";
 import { usePortfolio } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 export function SpreadsheetUpload() {
   const { addTxs } = usePortfolio();
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -16,9 +18,9 @@ export function SpreadsheetUpload() {
     setErrors(errs.slice(0, 5));
     if (txs.length) {
       addTxs(txs);
-      setStatus(`Imported ${txs.length} row${txs.length === 1 ? "" : "s"} from ${label}.`);
+      setStatus(t("csv_imported", { n: txs.length, label }));
     } else {
-      setStatus("No valid rows found.");
+      setStatus(t("csv_none"));
     }
   }
 
@@ -30,13 +32,9 @@ export function SpreadsheetUpload() {
   return (
     <div className="import-panel">
       <div className="import-panel__head">
-        <p className="import-kicker">01 · Spreadsheet</p>
-        <h3>Upload CSV</h3>
-        <p>
-          Drop an exchange export or your own books. Supports buy/sell,
-          transfer_in/out, income (staking/airdrop), fee, and trade (+
-          counter_asset, counter_qty).
-        </p>
+        <p className="import-kicker">{t("csv_kicker")}</p>
+        <h3>{t("csv_title")}</h3>
+        <p>{t("csv_desc")}</p>
       </div>
 
       <div
@@ -59,8 +57,8 @@ export function SpreadsheetUpload() {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
         }}
       >
-        <span className="dropzone__title">Drop CSV here</span>
-        <span className="dropzone__sub">or click to browse · .csv / .txt</span>
+        <span className="dropzone__title">{t("csv_drop")}</span>
+        <span className="dropzone__sub">{t("csv_drop_sub")}</span>
         <input
           ref={inputRef}
           type="file"
@@ -80,14 +78,14 @@ export function SpreadsheetUpload() {
           className="btn btn--ghost"
           onClick={() => handleText(SAMPLE_CSV, "sample.csv")}
         >
-          Load sample CSV
+          {t("csv_sample")}
         </button>
         <a
           className="btn btn--ghost"
           href={`data:text/csv;charset=utf-8,${encodeURIComponent(SAMPLE_CSV)}`}
           download="zei-sample.csv"
         >
-          Download template
+          {t("csv_template")}
         </a>
       </div>
 

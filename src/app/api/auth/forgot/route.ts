@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { sendResetEmail } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  apiJsonError,
+  apiT,
+  localeFromRequest,
+  localizeThrown,
+} from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
@@ -8,21 +14,20 @@ export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || "local";
   const rl = rateLimit(`forgot:${ip}`, 5, 60_000);
   if (!rl.ok) {
-    return NextResponse.json(
-      { error: `Too many attempts. Retry in ${rl.retryAfterSec}s.` },
-      { status: 429 },
-    );
+    return apiJsonError(req, "too_many", 429, {
+      sec: rl.retryAfterSec ?? 60,
+    });
   }
   try {
     const body = (await req.json()) as { email?: string };
     await sendResetEmail(body.email || "");
     return NextResponse.json({
       ok: true,
-      message: "If that email exists, a reset link was sent.",
+      message: apiT(localeFromRequest(req), "reset_sent"),
     });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Request failed" },
+      { error: localizeThrown(req, e, "request_failed") },
       { status: 400 },
     );
   }

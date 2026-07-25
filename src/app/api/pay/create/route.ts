@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createCryptoInvoice } from "@/lib/payments";
+import { apiJsonError, localizeThrown } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Login required" }, { status: 401 });
+    return apiJsonError(req, "login_required", 401);
   }
   try {
     const invoice = await createCryptoInvoice({
@@ -17,7 +18,7 @@ export async function POST() {
     return NextResponse.json(invoice);
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Payment failed" },
+      { error: localizeThrown(req, e, "payment_failed") },
       { status: 500 },
     );
   }

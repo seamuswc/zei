@@ -4,9 +4,11 @@ import { useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import { EXCHANGES } from "@/lib/import/exchange-live";
 import { usePortfolio } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 export function ExchangeLink() {
   const { addTxs, linkedExchanges, markExchangeLinked } = usePortfolio();
+  const { t } = useI18n();
   const [selected, setSelected] = useState("bitflyer");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
@@ -38,9 +40,7 @@ export function ExchangeLink() {
       if (!res.ok) throw new Error(data.error || "Exchange sync failed");
       addTxs(data.txs ?? []);
       markExchangeLinked(selected);
-      setStatus(
-        `Live linked ${exchange.name} · ${data.count ?? 0} fills imported.`,
-      );
+      setStatus(`${exchange.name} · ${data.count ?? 0}`);
       setApiSecret("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Exchange sync failed");
@@ -52,29 +52,26 @@ export function ExchangeLink() {
   return (
     <div className="import-panel">
       <div className="import-panel__head">
-        <p className="import-kicker">03 · Exchange · live</p>
-        <h3>Link exchange</h3>
-        <p>
-          Live APIs for bitFlyer, Coincheck, GMO Coin, bitbank, Binance JP.
-          Use read-only keys. Secrets are not stored.
-        </p>
+        <p className="import-kicker">{t("exchange_kicker")}</p>
+        <h3>{t("exchange_title")}</h3>
+        <p>{t("exchange_desc")}</p>
       </div>
 
       <label className="field">
-        <span>Exchange</span>
+        <span>{t("exchange_label")}</span>
         <select value={selected} onChange={(e) => setSelected(e.target.value)}>
           {EXCHANGES.map((ex) => (
             <option key={ex.id} value={ex.id}>
-              {ex.name} · live
+              {ex.name} · {t("live")}
             </option>
           ))}
         </select>
       </label>
 
-      <p className="field-hint">{exchange.blurb}</p>
+      <p className="field-hint">{t("exchange_blurb")}</p>
 
       <label className="field">
-        <span>API key</span>
+        <span>{t("exchange_key")}</span>
         <input
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
@@ -83,7 +80,7 @@ export function ExchangeLink() {
         />
       </label>
       <label className="field">
-        <span>API secret</span>
+        <span>{t("exchange_secret")}</span>
         <input
           type="password"
           value={apiSecret}
@@ -106,10 +103,10 @@ export function ExchangeLink() {
           onClick={() => void onLink()}
         >
           {busy
-            ? "Syncing live…"
+            ? t("exchange_syncing")
             : linkedExchanges.includes(selected)
-              ? "Linked"
-              : "Connect live"}
+              ? t("exchange_linked")
+              : t("exchange_connect")}
         </button>
       </div>
 

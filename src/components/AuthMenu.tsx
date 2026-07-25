@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import type { YearCarryRow } from "@/lib/tax/loss-carry";
 import { usePortfolio } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 type User = {
   id: string;
@@ -22,6 +23,7 @@ export function AuthMenu() {
     hydrateFromServer,
     setTaxYears,
   } = usePortfolio();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
@@ -53,8 +55,8 @@ export function AuthMenu() {
   useEffect(() => {
     void refreshMe();
     const q = new URLSearchParams(window.location.search);
-    if (q.get("verify") === "ok") setMsg("Email verified — you can log in.");
-    if (q.get("verify") === "bad") setMsg("Verification link invalid or expired.");
+    if (q.get("verify") === "ok") setMsg(t("auth_verify_ok"));
+    if (q.get("verify") === "bad") setMsg(t("auth_verify_bad"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -71,7 +73,7 @@ export function AuthMenu() {
         });
         const data = (await res.json()) as { error?: string; message?: string };
         if (!res.ok) throw new Error(data.error || "Request failed");
-        setMsg(data.message || "Check your email.");
+        setMsg(data.message || "OK");
         return;
       }
       const res = await fetch(
@@ -92,14 +94,11 @@ export function AuthMenu() {
       setPassword("");
       if (data.verifyLinkDev) setDevLink(data.verifyLinkDev);
       if (mode === "register" || data.needsVerify) {
-        setMsg(
-          data.message ||
-            "Account created. Verify your email, then log in.",
-        );
+        setMsg(data.message || t("auth_created"));
         setMode("login");
       } else {
         await refreshMe();
-        setMsg("Logged in.");
+        setMsg(t("auth_logged_in"));
         setOpen(false);
       }
     } catch (e) {
@@ -125,7 +124,7 @@ export function AuthMenu() {
       };
       if (!res.ok) throw new Error(data.error || "Resend failed");
       if (data.verifyLinkDev) setDevLink(data.verifyLinkDev);
-      setMsg(data.message || "Sent.");
+      setMsg(data.message || "OK");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Resend failed");
     } finally {
@@ -155,7 +154,7 @@ export function AuthMenu() {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || "Save failed");
-      setMsg("Ledger saved.");
+      setMsg(t("auth_saved"));
       await refreshMe();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Save failed");
@@ -189,7 +188,7 @@ export function AuthMenu() {
         className="btn btn--solid btn--sm"
         onClick={() => setOpen((v) => !v)}
       >
-        {user ? user.email.split("@")[0] : "Log in"}
+        {user ? user.email.split("@")[0] : t("auth_login")}
       </button>
       {open && (
         <div className="auth-panel">
@@ -205,7 +204,7 @@ export function AuthMenu() {
                   }
                   onClick={() => setMode("login")}
                 >
-                  Log in
+                  {t("auth_login")}
                 </button>
                 <button
                   type="button"
@@ -216,11 +215,11 @@ export function AuthMenu() {
                   }
                   onClick={() => setMode("register")}
                 >
-                  Create account
+                  {t("auth_register")}
                 </button>
               </div>
               <label className="field">
-                <span>Email</span>
+                <span>{t("auth_email")}</span>
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -229,7 +228,7 @@ export function AuthMenu() {
               </label>
               {mode !== "forgot" && (
                 <label className="field">
-                  <span>Password (8+)</span>
+                  <span>{t("auth_password")}</span>
                   <input
                     type="password"
                     value={password}
@@ -247,12 +246,12 @@ export function AuthMenu() {
                 onClick={() => void auth()}
               >
                 {busy
-                  ? "…"
+                  ? t("auth_creating")
                   : mode === "login"
-                    ? "Log in"
+                    ? t("auth_login")
                     : mode === "register"
-                      ? "Create account"
-                      : "Send reset link"}
+                      ? t("auth_register")
+                      : t("auth_send_reset")}
               </button>
               <div className="auth-links">
                 {mode === "login" && (
@@ -262,7 +261,7 @@ export function AuthMenu() {
                       className="linkish"
                       onClick={() => setMode("forgot")}
                     >
-                      Forgot password
+                      {t("auth_forgot")}
                     </button>
                     <button
                       type="button"
@@ -270,7 +269,7 @@ export function AuthMenu() {
                       disabled={busy || !email}
                       onClick={() => void resend()}
                     >
-                      Resend verify email
+                      {t("auth_resend")}
                     </button>
                   </>
                 )}
@@ -280,7 +279,7 @@ export function AuthMenu() {
                     className="linkish"
                     onClick={() => setMode("login")}
                   >
-                    Back to log in
+                    {t("auth_back")}
                   </button>
                 )}
               </div>
@@ -290,7 +289,8 @@ export function AuthMenu() {
               <p className="auth-user">
                 <strong>{user.email}</strong>
                 <br />
-                {user.emailVerified ? "Verified" : "Unverified"} · {user.plan}
+                {user.emailVerified ? t("auth_verified") : t("auth_unverified")} ·{" "}
+                {user.plan}
               </p>
               <div className="import-actions">
                 {user.plan !== "pro" && (
@@ -300,7 +300,7 @@ export function AuthMenu() {
                     disabled={busy}
                     onClick={() => void pay()}
                   >
-                    Pay crypto (Pro)
+                    {t("auth_pay")}
                   </button>
                 )}
                 <button
@@ -309,14 +309,14 @@ export function AuthMenu() {
                   disabled={busy || user.plan !== "pro"}
                   onClick={() => void save()}
                 >
-                  Save ledger
+                  {t("auth_save")}
                 </button>
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
                   onClick={() => void logout()}
                 >
-                  Log out
+                  {t("auth_logout")}
                 </button>
               </div>
             </>
@@ -324,8 +324,8 @@ export function AuthMenu() {
           {msg && <p className="status-ok">{msg}</p>}
           {devLink && (
             <p className="field-hint">
-              Dev verify link:{" "}
-              <a href={devLink}>click to verify</a>
+              {t("auth_dev_link")}{" "}
+              <a href={devLink}>{t("auth_click_verify")}</a>
             </p>
           )}
         </div>

@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { sendVerifyEmail } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  apiJsonError,
+  apiT,
+  localeFromRequest,
+  localizeThrown,
+} from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
@@ -9,10 +15,7 @@ export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || "local";
   const rl = rateLimit(`resend:${ip}`, 5, 60_000);
   if (!rl.ok) {
-    return NextResponse.json(
-      { error: `Too many attempts. Retry in ${rl.retryAfterSec}s.` },
-      { status: 429 },
-    );
+    return apiJsonError(req, "too_many", 429, { sec: rl.retryAfterSec ?? 60 });
   }
   try {
     const body = (await req.json()) as { email?: string };
@@ -26,21 +29,22 @@ export async function POST(req: Request) {
       | { id: string; email: string; email_verified_at: string | null }
       | undefined;
 
+    const locale = localeFromRequest(req);
     if (row && !row.email_verified_at) {
       const link = await sendVerifyEmail(row.id, row.email);
       return NextResponse.json({
         ok: true,
-        message: "Verification email sent.",
+        message: apiT(locale, "verify_sent"),
         verifyLinkDev: process.env.RESEND_API_KEY ? undefined : link,
       });
     }
     return NextResponse.json({
       ok: true,
-      message: "If that account needs verification, a link was sent.",
+      message: apiT(locale, "verify_sent_if"),
     });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Resend failed" },
+      { error: localizeThrown(req, e, "resend_failed") },
       { status: 400 },
     );
   }

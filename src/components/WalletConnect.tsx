@@ -3,9 +3,11 @@
 import { useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import { usePortfolio } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 export function WalletConnect() {
   const { addTxs, connectedWallet, setConnectedWallet } = usePortfolio();
+  const { t } = useI18n();
   const [address, setAddress] = useState("");
   const [etherscanKey, setEtherscanKey] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function WalletConnect() {
       addTxs(data.txs ?? []);
       setConnectedWallet(data.address);
       setStatus(
-        `Live sync · ${data.chain} · ${data.count ?? 0} valued transfers (JPY via CoinGecko).`,
+        `Live · ${data.chain} · ${data.count ?? 0}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Wallet sync failed");
@@ -50,16 +52,13 @@ export function WalletConnect() {
   return (
     <div className="import-panel">
       <div className="import-panel__head">
-        <p className="import-kicker">02 · On-chain · live</p>
-        <h3>Connect wallet</h3>
-        <p>
-          Live read: Ethereum native + major ERC-20 (Etherscan) or Bitcoin
-          (blockchain.info), priced to JPY with audit trail.
-        </p>
+        <p className="import-kicker">{t("wallet_kicker")}</p>
+        <h3>{t("wallet_title")}</h3>
+        <p>{t("wallet_desc")}</p>
       </div>
 
       <label className="field">
-        <span>Wallet address</span>
+        <span>{t("wallet_address")}</span>
         <input
           value={address}
           onChange={(e) => setAddress(e.target.value)}
@@ -71,11 +70,11 @@ export function WalletConnect() {
 
       {needsEthKey && (
         <label className="field">
-          <span>Etherscan API key</span>
+          <span>{t("wallet_etherscan")}</span>
           <input
             value={etherscanKey}
             onChange={(e) => setEtherscanKey(e.target.value)}
-            placeholder="Free key from etherscan.io/apikey"
+            placeholder={t("wallet_etherscan_ph")}
             spellCheck={false}
             autoComplete="off"
           />
@@ -89,19 +88,17 @@ export function WalletConnect() {
           disabled={busy || !address.trim()}
           onClick={() => void onConnect()}
         >
-          {busy ? "Syncing live…" : "Connect & sync"}
+          {busy ? t("wallet_syncing") : t("wallet_sync")}
         </button>
       </div>
 
       {needsEthKey && !etherscanKey.trim() && (
-        <p className="field-hint">
-          Ethereum needs an Etherscan key here, or set ETHERSCAN_API_KEY in the
-          server env.
-        </p>
+        <p className="field-hint">{t("wallet_hint")}</p>
       )}
-
       {connectedWallet && (
-        <p className="status-meta">Linked: {connectedWallet}</p>
+        <p className="status-meta">
+          {t("wallet_linked", { address: connectedWallet })}
+        </p>
       )}
       {status && <p className="status-ok">{status}</p>}
       {error && <p className="status-err-line">{error}</p>}

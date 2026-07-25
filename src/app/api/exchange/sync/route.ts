@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchExchangeLive } from "@/lib/import/exchange-live";
+import { apiJsonError } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
@@ -16,10 +17,7 @@ export async function POST(req: Request) {
     const apiSecret = body.apiSecret?.trim();
 
     if (!exchange || !apiKey || !apiSecret) {
-      return NextResponse.json(
-        { error: "exchange, apiKey, and apiSecret are required." },
-        { status: 400 },
-      );
+      return apiJsonError(req, "exchange_creds_required", 400);
     }
 
     // Never log secrets

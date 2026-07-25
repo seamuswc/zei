@@ -13,6 +13,7 @@ const SIDES = new Set<TxSide>([
   "income",
   "fee",
   "wrap",
+  "bridge",
 ]);
 
 /**
@@ -146,9 +147,9 @@ export function parseSpreadsheetCsv(text: string): {
       continue;
     }
 
-    if (side === "wrap") {
+    if (side === "wrap" || side === "bridge") {
       const counterAsset = (counterAssetRaw || "").trim().toUpperCase();
-      if (!counterAsset) {
+      if (side === "wrap" && !counterAsset) {
         errors.push(`Row ${i + 1}: wrap requires counter_asset.`);
         continue;
       }
@@ -156,13 +157,17 @@ export function parseSpreadsheetCsv(text: string): {
         id: uid("csv"),
         date,
         asset,
-        side: "wrap",
+        side: side as TxSide,
         quantity,
         jpyValue: 0,
         feeJpy: Number.isFinite(feeJpy) ? feeJpy : undefined,
         source: "csv",
-        note: noteRaw?.trim() || `wrap→${counterAsset}`,
-        counterAsset,
+        note:
+          noteRaw?.trim() ||
+          (side === "wrap"
+            ? `wrap→${counterAsset}`
+            : `bridge (not taxed)`),
+        counterAsset: counterAsset || undefined,
         priceSource: "csv_provided",
       });
       continue;

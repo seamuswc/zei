@@ -2,25 +2,20 @@ import { NextResponse } from "next/server";
 import { getCurrentUser, isPro } from "@/lib/auth";
 import { saveLedger } from "@/lib/ledger-store";
 import type { CryptoTx } from "@/lib/tax/types";
+import { apiJsonError } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
 export async function PUT(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Login required" }, { status: 401 });
+    return apiJsonError(req, "login_required", 401);
   }
   if (!user.emailVerified) {
-    return NextResponse.json(
-      { error: "Verify your email before saving." },
-      { status: 403 },
-    );
+    return apiJsonError(req, "verify_before_save", 403);
   }
   if (!isPro(user)) {
-    return NextResponse.json(
-      { error: "Pro plan required to save cloud ledger. Pay with crypto to unlock." },
-      { status: 402 },
-    );
+    return apiJsonError(req, "pro_required", 402);
   }
 
   const body = (await req.json()) as {

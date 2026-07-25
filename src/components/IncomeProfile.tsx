@@ -2,26 +2,24 @@
 
 import { formatJpy } from "@/lib/tax/engine";
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 export function IncomeProfile() {
   const { otherIncomeJpy, setOtherIncomeJpy, incomeProvided } = usePortfolio();
   const { estimate } = useTaxSummary();
+  const { t } = useI18n();
 
   return (
     <section className="income" id="income">
       <div className="income__intro">
-        <p className="import-kicker">Crypto only</p>
-        <h2>Optional: other income for a rough rate check</h2>
-        <p>
-          ZEI calculates <strong>crypto 雑所得 only</strong>. Enter other
-          taxable income manually if you want a bracket sketch —{" "}
-          <strong>not a final tax rate</strong>.
-        </p>
+        <p className="import-kicker">{t("income_kicker")}</p>
+        <h2>{t("income_title")}</h2>
+        <p>{t("income_sub")}</p>
       </div>
 
       <div className="income__simple">
         <label className="field">
-          <span>Other taxable income (optional, JPY)</span>
+          <span>{t("income_label")}</span>
           <input
             type="number"
             min={0}
@@ -35,14 +33,15 @@ export function IncomeProfile() {
               }
               setOtherIncomeJpy(Number(raw) || 0);
             }}
-            placeholder="e.g. 5000000"
+            placeholder={t("income_ph")}
           />
         </label>
         <p className="status-warn">
-          Illustrative only. Your accountant / 確定申告 combines all income.
-          Crypto gain this year: {formatJpy(estimate.taxableGainJpy)}.
+          {t("income_warn", { gain: formatJpy(estimate.taxableGainJpy) })}
           {incomeProvided && otherIncomeJpy > 0
-            ? ` Rough crypto tax sketch: ${formatJpy(estimate.cryptoIncrementalTaxJpy)}.`
+            ? t("income_sketch", {
+                tax: formatJpy(estimate.cryptoIncrementalTaxJpy),
+              })
             : ""}
         </p>
       </div>

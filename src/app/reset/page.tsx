@@ -2,10 +2,13 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { I18nProvider, useI18n } from "@/components/I18nProvider";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 function ResetForm() {
   const params = useSearchParams();
   const token = params.get("token") || "";
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,7 +24,7 @@ function ResetForm() {
       });
       const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) throw new Error(data.error || "Reset failed");
-      setMsg(data.message || "Password updated.");
+      setMsg(data.message || "OK");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Reset failed");
     } finally {
@@ -31,8 +34,11 @@ function ResetForm() {
 
   return (
     <main className="reset-page">
-      <h1>Reset password</h1>
-      <p>Enter a new password (8+ characters).</p>
+      <div className="reset-page__lang">
+        <LanguageToggle />
+      </div>
+      <h1>{t("reset_title")}</h1>
+      <p>{t("reset_sub")}</p>
       <input
         type="password"
         value={password}
@@ -45,11 +51,11 @@ function ResetForm() {
         disabled={busy || !token || password.length < 8}
         onClick={() => void submit()}
       >
-        {busy ? "…" : "Update password"}
+        {busy ? t("auth_creating") : t("reset_update")}
       </button>
       {msg && <p>{msg}</p>}
       <p>
-        <a href="/">Back to ZEI</a>
+        <a href="/">{t("reset_back")}</a>
       </p>
     </main>
   );
@@ -57,8 +63,10 @@ function ResetForm() {
 
 export default function ResetPage() {
   return (
-    <Suspense fallback={<main className="reset-page">Loading…</main>}>
-      <ResetForm />
-    </Suspense>
+    <I18nProvider>
+      <Suspense fallback={<main className="reset-page">…</main>}>
+        <ResetForm />
+      </Suspense>
+    </I18nProvider>
   );
 }

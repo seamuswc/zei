@@ -15,9 +15,9 @@ const plex = IBM_Plex_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "ZEI — Crypto tax for Japan (crypto only)",
+  title: "ZEI — 日本居住者向け暗号資産の税務",
   description:
-    "Crypto-only Japan 雑所得 with 移動平均法. Live wallet & exchange sync, accountant export pack.",
+    "暗号資産のみの雑所得を移動平均法で計算。ウォレット・取引所のライブ同期、税理士向けZIP出力。",
 };
 
 export default function RootLayout({

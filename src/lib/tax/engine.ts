@@ -31,7 +31,7 @@ export function computeMovingAverage(txs: CryptoTx[]): {
     const d = a.date.localeCompare(b.date);
     if (d !== 0) return d;
     const rank = (s: CryptoTx["side"]) => {
-      if (s === "transfer_in" || s === "buy" || s === "income" || s === "wrap")
+      if (s === "transfer_in" || s === "buy" || s === "income" || s === "wrap" || s === "bridge")
         return 0;
       if (s === "fee") return 2;
       return 1;
@@ -181,8 +181,24 @@ export function computeMovingAverage(txs: CryptoTx[]): {
       continue;
     }
 
-    if (tx.side === "wrap") {
-      // Non-taxable wrap/unwrap: move qty + cost to counterAsset (or WRAP_PAIRS)
+    if (tx.side === "wrap" || tx.side === "bridge") {
+      // Non-taxable wrap/unwrap or bridge: move qty + cost, no disposal.
+      // Bridge keeps the same asset symbol (ownership unchanged across chains).
+      if (tx.side === "bridge") {
+        const moveQty = Math.min(qty, lot.quantity || qty);
+        const moveCost =
+          tx.costBasisOverrideJpy != null
+            ? tx.costBasisOverrideJpy
+            : lot.avgCostJpy * moveQty;
+        // No lot change needed if same asset — just annotate; qty stays.
+        // If user recorded as leave+arrive on same symbol, treat as no-op carry.
+        if (moveQty > 0 && lot.quantity >= moveQty) {
+          // Keep book intact — bridge does not change holdings economically
+          void moveCost;
+        }
+        continue;
+      }
+
       const toAsset = (
         tx.counterAsset ||
         WRAP_PAIRS[lot.asset] ||

@@ -102,12 +102,12 @@ export function consumeEmailToken(
     .get(hashToken(token), purpose) as
     | { user_id: string; expires_at: string }
     | undefined;
-  if (!row) throw new Error("Invalid or expired link.");
+  if (!row) throw new Error("api:invalid_link");
   if (new Date(row.expires_at).getTime() < Date.now()) {
     db.prepare(`DELETE FROM email_tokens WHERE token_hash = ?`).run(
       hashToken(token),
     );
-    throw new Error("Invalid or expired link.");
+    throw new Error("api:invalid_link");
   }
   db.prepare(`DELETE FROM email_tokens WHERE token_hash = ?`).run(
     hashToken(token),
@@ -123,7 +123,7 @@ export function markEmailVerified(userId: string) {
 }
 
 export function setPassword(userId: string, password: string) {
-  if (password.length < 8) throw new Error("Password must be 8+ characters.");
+  if (password.length < 8) throw new Error("api:password_short");
   const db = getDb();
   db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(
     hashPassword(password),
@@ -138,12 +138,12 @@ export async function registerUser(
   const db = getDb();
   const normalized = email.trim().toLowerCase();
   if (!normalized.includes("@") || password.length < 8) {
-    throw new Error("Valid email and password (8+ chars) required.");
+    throw new Error("api:email_password_required");
   }
   const existing = db
     .prepare("SELECT id FROM users WHERE email = ?")
     .get(normalized);
-  if (existing) throw new Error("Email already registered.");
+  if (existing) throw new Error("api:email_taken");
 
   const id = uid();
   const now = new Date().toISOString();
@@ -194,12 +194,10 @@ export function loginUser(email: string, password: string): SessionUser {
       }
     | undefined;
   if (!row || !verifyPassword(password, row.password_hash)) {
-    throw new Error("Invalid email or password.");
+    throw new Error("api:invalid_credentials");
   }
   if (!row.email_verified_at && process.env.REQUIRE_EMAIL_VERIFY !== "0") {
-    throw new Error(
-      "Email not verified. Check your inbox (or data/mail in local dev), then verify before logging in.",
-    );
+    throw new Error("api:email_unverified");
   }
   return {
     id: row.id,

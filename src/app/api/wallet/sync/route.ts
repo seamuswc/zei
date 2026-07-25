@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLiveWalletTxs } from "@/lib/import/wallet-live";
+import { apiJsonError } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
 
@@ -11,10 +12,7 @@ export async function POST(req: Request) {
     };
     const address = body.address?.trim();
     if (!address) {
-      return NextResponse.json(
-        { error: "Wallet address is required." },
-        { status: 400 },
-      );
+      return apiJsonError(req, "wallet_address_required", 400);
     }
 
     const result = await fetchLiveWalletTxs({

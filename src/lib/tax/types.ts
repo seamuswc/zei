@@ -5,7 +5,8 @@ export type TxSide =
   | "transfer_out"
   | "income"
   | "fee"
-  | "wrap";
+  | "wrap"
+  | "bridge";
 
 export type TxSource = "csv" | "wallet" | "exchange";
 

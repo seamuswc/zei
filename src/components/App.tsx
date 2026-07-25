@@ -9,26 +9,37 @@ import { TaxResults } from "./TaxResults";
 import { ReviewLedger } from "./ReviewLedger";
 import { AuthMenu } from "./AuthMenu";
 import { TaxYearsPanel } from "./TaxYearsPanel";
+import { TaxRulesGuide } from "./TaxRulesGuide";
+import { LanguageToggle } from "./LanguageToggle";
 import { PortfolioProvider } from "./PortfolioProvider";
+import { I18nProvider, useI18n } from "./I18nProvider";
 
-export function App() {
+function AppShell() {
+  const { t } = useI18n();
+
   return (
     <PortfolioProvider>
       <div className="app">
         <header className="topbar">
           <a className="brand" href="#top">
             <span className="brand__mark" aria-hidden />
-            ZEI
+            {t("brand")}
           </a>
           <nav className="topbar__nav">
-            <a href="#import">Import</a>
-            <a href="#income">Income</a>
-            <a href="#results">Tax year</a>
-            <a href="#years">Years</a>
-            <a href="#review">Review</a>
-            <a href="#export">Export</a>
+            <a href="#import">{t("nav_import")}</a>
+            <a href="#income">{t("nav_income")}</a>
+            <a href="#results">{t("nav_results")}</a>
+            <a href="#years">{t("nav_years")}</a>
+            <a href="#review">{t("nav_review")}</a>
+            <a href="#export">{t("nav_export")}</a>
           </nav>
-          <Suspense fallback={<span className="btn btn--solid btn--sm">Log in</span>}>
+          <LanguageToggle />
+          <TaxRulesGuide />
+          <Suspense
+            fallback={
+              <span className="btn btn--solid btn--sm">{t("auth_login")}</span>
+            }
+          >
             <AuthMenu />
           </Suspense>
         </header>
@@ -36,65 +47,60 @@ export function App() {
         <main id="top">
           <section className="hero">
             <div className="hero__copy">
-              <p className="hero__brand">ZEI</p>
-              <h1>Crypto tax for Japan residents</h1>
-              <p className="hero__sub">
-                Crypto only — verify email, pay in crypto, export a ZIP your
-                税理士 can open. Not a full tax return.
-              </p>
+              <p className="hero__brand">{t("brand")}</p>
+              <h1>{t("hero_title")}</h1>
+              <p className="hero__sub">{t("hero_sub")}</p>
               <div className="hero__cta">
                 <a className="btn btn--solid" href="#import">
-                  Import activity
+                  {t("hero_cta_import")}
                 </a>
                 <a className="btn btn--ghost" href="#export">
-                  Accountant export
+                  {t("hero_cta_export")}
                 </a>
+                <TaxRulesGuide />
               </div>
             </div>
             <div className="hero__visual" aria-hidden>
               <div className="ledger-plane">
                 <div className="ledger-plane__rule" />
                 <div className="ledger-plane__cols">
-                  <span>買付</span>
-                  <span>売却</span>
-                  <span>原価</span>
-                  <span>所得</span>
+                  <span>{t("hero_col_buy")}</span>
+                  <span>{t("hero_col_sell")}</span>
+                  <span>{t("hero_col_basis")}</span>
+                  <span>{t("hero_col_income")}</span>
                 </div>
                 <ul className="ledger-plane__rows">
                   <li>
                     <span>BTC</span>
-                    <span>売</span>
+                    <span>{t("hero_row_sell")}</span>
                     <span>¥420,000</span>
                   </li>
                   <li>
                     <span>ETH</span>
                     <span>→WETH</span>
-                    <span>not taxed</span>
+                    <span>{t("hero_row_nontax")}</span>
                   </li>
                   <li>
                     <span>ZIP</span>
-                    <span>税理士</span>
-                    <span>export</span>
+                    <span>{t("hero_row_accountant")}</span>
+                    <span>{t("hero_row_export")}</span>
                   </li>
                   <li className="ledger-plane__rows--gain">
-                    <span>雑所得</span>
-                    <span>暗号のみ</span>
-                    <span>ネット</span>
+                    <span>{t("hero_row_misc")}</span>
+                    <span>{t("hero_row_crypto_only")}</span>
+                    <span>{t("hero_row_net")}</span>
                   </li>
                 </ul>
-                <div className="ledger-plane__stamp">移動平均法</div>
+                <div className="ledger-plane__stamp">{t("hero_stamp")}</div>
               </div>
             </div>
           </section>
 
           <section className="import" id="import">
             <div className="section-intro">
-              <p className="import-kicker">Bring data in</p>
-              <h2>CSV, live wallet, live exchange</h2>
-              <p>
-                Price order: exchange fill → on-chain/public quote → CoinGecko →
-                manual in Review. Wraps are not taxed.
-              </p>
+              <p className="import-kicker">{t("import_kicker")}</p>
+              <h2>{t("import_title")}</h2>
+              <p>{t("import_sub")}</p>
             </div>
             <div className="import-grid">
               <SpreadsheetUpload />
@@ -112,12 +118,17 @@ export function App() {
         </main>
 
         <footer className="footer">
-          <p>
-            ZEI · Export ZIP for your tax accountant from Tax year →{" "}
-            <strong>Export for accountant</strong>. Not tax advice.
-          </p>
+          <p>{t("footer")}</p>
         </footer>
       </div>
     </PortfolioProvider>
+  );
+}
+
+export function App() {
+  return (
+    <I18nProvider>
+      <AppShell />
+    </I18nProvider>
   );
 }

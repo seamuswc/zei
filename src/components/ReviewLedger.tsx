@@ -1,8 +1,10 @@
 "use client";
 
 import type { TxSide } from "@/lib/tax/types";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { formatJpy } from "@/lib/tax/engine";
 import { usePortfolio } from "./PortfolioProvider";
+import { useI18n } from "./I18nProvider";
 
 const SIDES: TxSide[] = [
   "buy",
@@ -12,58 +14,59 @@ const SIDES: TxSide[] = [
   "income",
   "fee",
   "wrap",
+  "bridge",
 ];
 
 export function ReviewLedger() {
   const { txs, updateTx, removeTx, toggleExclude } = usePortfolio();
+  const { t } = useI18n();
   if (txs.length === 0) return null;
+
+  function sideLabel(side: TxSide) {
+    return t(`side_${side}` as MessageKey);
+  }
 
   return (
     <section className="ledger" id="review">
       <div className="ledger__head">
-        <p className="import-kicker">Review · fully editable</p>
-        <h2>Edit prices, quantities, and cost basis</h2>
-        <p>
-          Change any field. <strong>JPY</strong> is the price/proceeds total.
-          <strong> Cost override</strong> is optional — on buys it sets
-          acquisition cost; on sells/fees it sets 取得価額 instead of 移動平均.
-          Leave blank to use the engine.
-        </p>
+        <p className="import-kicker">{t("review_kicker")}</p>
+        <h2>{t("review_title")}</h2>
+        <p>{t("review_sub")}</p>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Asset</th>
-              <th>Side</th>
-              <th>Qty</th>
-              <th>JPY (price)</th>
-              <th>Fee JPY</th>
-              <th>Cost override</th>
-              <th>Price src</th>
-              <th>Actions</th>
+              <th>{t("th_date")}</th>
+              <th>{t("th_asset")}</th>
+              <th>{t("th_side")}</th>
+              <th>{t("th_qty")}</th>
+              <th>{t("th_jpy")}</th>
+              <th>{t("th_fee")}</th>
+              <th>{t("th_cost_override")}</th>
+              <th>{t("th_price_src")}</th>
+              <th>{t("th_actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {txs.map((t) => (
+            {txs.map((tx) => (
               <tr
-                key={t.id}
-                className={t.excluded ? "row-excluded" : undefined}
+                key={tx.id}
+                className={tx.excluded ? "row-excluded" : undefined}
               >
                 <td>
                   <input
                     className="cell-input"
-                    value={t.date}
-                    onChange={(e) => updateTx(t.id, { date: e.target.value })}
+                    value={tx.date}
+                    onChange={(e) => updateTx(tx.id, { date: e.target.value })}
                   />
                 </td>
                 <td>
                   <input
                     className="cell-input cell-input--asset"
-                    value={t.asset}
+                    value={tx.asset}
                     onChange={(e) =>
-                      updateTx(t.id, {
+                      updateTx(tx.id, {
                         asset: e.target.value.toUpperCase(),
                       })
                     }
@@ -72,19 +75,19 @@ export function ReviewLedger() {
                 <td>
                   <select
                     className="cell-input cell-input--side"
-                    value={t.side}
+                    value={tx.side}
                     onChange={(e) =>
-                      updateTx(t.id, { side: e.target.value as TxSide })
+                      updateTx(tx.id, { side: e.target.value as TxSide })
                     }
                   >
                     {SIDES.map((s) => (
                       <option key={s} value={s}>
-                        {s}
+                        {sideLabel(s)}
                       </option>
                     ))}
                   </select>
-                  {t.matchedTransferId && (
-                    <div className="match-tag">matched</div>
+                  {tx.matchedTransferId && (
+                    <div className="match-tag">{t("review_matched")}</div>
                   )}
                 </td>
                 <td>
@@ -92,9 +95,9 @@ export function ReviewLedger() {
                     className="cell-input cell-input--num"
                     type="number"
                     step="any"
-                    value={t.quantity}
+                    value={tx.quantity}
                     onChange={(e) =>
-                      updateTx(t.id, {
+                      updateTx(tx.id, {
                         quantity: Number(e.target.value) || 0,
                       })
                     }
@@ -104,14 +107,14 @@ export function ReviewLedger() {
                   <input
                     className="cell-input cell-input--num"
                     type="number"
-                    value={t.jpyValue}
+                    value={tx.jpyValue}
                     onChange={(e) =>
-                      updateTx(t.id, {
+                      updateTx(tx.id, {
                         jpyValue: Number(e.target.value) || 0,
-                        priceSource: "csv_provided",
+                        priceSource: "manual",
                         unitPriceJpy:
-                          t.quantity > 0
-                            ? (Number(e.target.value) || 0) / t.quantity
+                          tx.quantity > 0
+                            ? (Number(e.target.value) || 0) / tx.quantity
                             : undefined,
                       })
                     }
@@ -121,10 +124,10 @@ export function ReviewLedger() {
                   <input
                     className="cell-input cell-input--num"
                     type="number"
-                    value={t.feeJpy ?? ""}
+                    value={tx.feeJpy ?? ""}
                     placeholder="0"
                     onChange={(e) =>
-                      updateTx(t.id, {
+                      updateTx(tx.id, {
                         feeJpy:
                           e.target.value === ""
                             ? undefined
@@ -137,10 +140,10 @@ export function ReviewLedger() {
                   <input
                     className="cell-input cell-input--num"
                     type="number"
-                    value={t.costBasisOverrideJpy ?? ""}
-                    placeholder="auto"
+                    value={tx.costBasisOverrideJpy ?? ""}
+                    placeholder={t("review_auto")}
                     onChange={(e) =>
-                      updateTx(t.id, {
+                      updateTx(tx.id, {
                         costBasisOverrideJpy:
                           e.target.value === ""
                             ? undefined
@@ -150,31 +153,30 @@ export function ReviewLedger() {
                   />
                 </td>
                 <td className="muted">
-                  {t.priceSource ?? "—"}
+                  {tx.priceSource ?? "—"}
                   <div className="tiny">
-                    {t.source}
-                    {t.exchange ? ` · ${t.exchange}` : ""}
+                    {tx.source}
+                    {tx.exchange ? ` · ${tx.exchange}` : ""}
                   </div>
-                  {t.note && <div className="tiny">{t.note}</div>}
                 </td>
                 <td>
                   <div className="row-actions">
                     <button
                       type="button"
                       className="btn btn--ghost btn--sm"
-                      onClick={() => toggleExclude(t.id)}
+                      onClick={() => toggleExclude(tx.id)}
                     >
-                      {t.excluded ? "Include" : "Exclude"}
+                      {tx.excluded ? t("review_include") : t("review_exclude")}
                     </button>
                     <button
                       type="button"
                       className="btn btn--ghost btn--sm"
-                      onClick={() => removeTx(t.id)}
+                      onClick={() => removeTx(tx.id)}
                     >
-                      Delete
+                      {t("review_delete")}
                     </button>
                   </div>
-                  <div className="muted tiny">{formatJpy(t.jpyValue)}</div>
+                  <div className="muted tiny">{formatJpy(tx.jpyValue)}</div>
                 </td>
               </tr>
             ))}
