@@ -13,6 +13,7 @@ export const messages = {
     lang_en: "English",
     lang_toggle: "Language",
 
+    wip_banner: "現在準備中です — まだ本番公開前です。見つけた方へ：もう少しお待ちください。",
     hero_title: "日本居住者向け暗号資産の税務",
     hero_sub:
       "暗号資産のみ対応。メール認証、暗号資産で決済、税理士に渡せるZIPを出力。確定申告の代わりではありません。",
@@ -279,6 +280,8 @@ export const messages = {
     lang_en: "English",
     lang_toggle: "Language",
 
+    wip_banner:
+      "Still under construction — not launched yet. If you found this early: hang tight.",
     hero_title: "Crypto tax for Japan residents",
     hero_sub:
       "Crypto only — verify email, pay in crypto, export a ZIP your tax accountant can open. Not a full tax return.",

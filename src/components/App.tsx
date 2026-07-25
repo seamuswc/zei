@@ -44,6 +44,10 @@ function AppShell() {
           </Suspense>
         </header>
 
+        <div className="wip-banner" role="status">
+          {t("wip_banner")}
+        </div>
+
         <main id="top">
           <section className="hero">
             <div className="hero__copy">
