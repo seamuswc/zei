@@ -16,6 +16,27 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** CoinGecko Demo (`CG-…`) or Pro key. */
+function coingeckoHeaders(): HeadersInit {
+  const key = (process.env.COINGECKO_API_KEY || "").trim();
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (!key) return headers;
+  if (key.startsWith("CG-")) {
+    headers["x-cg-demo-api-key"] = key;
+  } else {
+    headers["x-cg-pro-api-key"] = key;
+  }
+  return headers;
+}
+
+function coingeckoBase(): string {
+  const key = (process.env.COINGECKO_API_KEY || "").trim();
+  if (key && !key.startsWith("CG-")) {
+    return "https://pro-api.coingecko.com/api/v3";
+  }
+  return "https://api.coingecko.com/api/v3";
+}
+
 export type PriceHint = {
   exchangeJpy?: number;
   onchainJpy?: number;
@@ -63,10 +84,13 @@ export async function resolveJpyUnitPrice(
 
   const [y, m, d] = isoDate.split("-");
   const date = `${d}-${m}-${y}`;
-  await sleep(320);
-  const histUrl = `https://api.coingecko.com/api/v3/coins/${coinId}/history?date=${date}&localization=false`;
+  const base = coingeckoBase();
+  const headers = coingeckoHeaders();
+  // Demo key: lighter throttle; public unauthenticated: be polite
+  await sleep(process.env.COINGECKO_API_KEY ? 120 : 320);
+  const histUrl = `${base}/coins/${coinId}/history?date=${date}&localization=false`;
   const histRes = await fetch(histUrl, {
-    headers: { accept: "application/json" },
+    headers,
     next: { revalidate: 86400 },
   });
   if (histRes.ok) {
@@ -81,9 +105,9 @@ export async function resolveJpyUnitPrice(
     }
   }
 
-  await sleep(320);
-  const spotUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=jpy`;
-  const spotRes = await fetch(spotUrl, { cache: "no-store" });
+  await sleep(process.env.COINGECKO_API_KEY ? 120 : 320);
+  const spotUrl = `${base}/simple/price?ids=${coinId}&vs_currencies=jpy`;
+  const spotRes = await fetch(spotUrl, { headers, cache: "no-store" });
   if (!spotRes.ok) {
     throw new Error(`CoinGecko failed for ${assetKey} (${spotRes.status})`);
   }
