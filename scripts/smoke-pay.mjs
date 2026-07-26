@@ -1,15 +1,15 @@
 /**
- * Smoke test: invoice create, QR, DB row, sequential Etherscan scan, amount match logic.
+ * Smoke test: clean-price invoice, from_address bind, Etherscan scan, from+amount match logic.
  * Usage: USDC_RECEIVE_ADDRESS=0x... ETHERSCAN_API_KEY=... node scripts/smoke-pay.mjs
  */
 import { randomBytes } from "crypto";
 import Database from "better-sqlite3";
-import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 
 const address = (process.env.USDC_RECEIVE_ADDRESS || "").trim();
 const key = process.env.ETHERSCAN_API_KEY || "";
+const PRICE = Number(process.env.ZEI_PRO_PRICE_USDC || 20);
 if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
   console.error("FAIL: set USDC_RECEIVE_ADDRESS");
   process.exit(1);
@@ -28,6 +28,9 @@ const CHAINS = [
   { id: 43114, name: "Avalanche", usdc: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E" },
   { id: 59144, name: "Linea", usdc: "0x176211869cA2b568f2A7D4EE941E073a821EE1ff" },
 ];
+
+const TOLERANCE = 10_000n;
+const FROM = "0x1111111111111111111111111111111111111111";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -60,17 +63,11 @@ async function tokentx(chain) {
 }
 
 const paymentId = randomBytes(12).toString("hex");
-const base = 20_000_000n;
-const micro = (BigInt("0x" + paymentId.slice(0, 8)) % 999999n) + 1n;
-const amountRaw = base + micro;
-const amountUsdc = `${amountRaw / 1000000n}.${(amountRaw % 1000000n).toString().padStart(6, "0")}`;
-const ref = `ZEI:smoke:${paymentId.slice(0, 8)}`;
-const eip681 = `ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=${address}&uint256=${amountRaw}`;
-const qr = await QRCode.toDataURL(eip681, { width: 120, margin: 1 });
+const amountRaw = BigInt(Math.round(PRICE * 1_000_000));
+const amountUsdc = Number.isInteger(PRICE) ? String(PRICE) : String(PRICE);
 
 console.log("amount", amountUsdc, "raw", amountRaw.toString());
-console.log("ref", ref);
-console.log("qr bytes", qr.length);
+console.log("from", FROM);
 
 const dataDir = path.join(process.cwd(), "data");
 fs.mkdirSync(dataDir, { recursive: true });
@@ -97,7 +94,8 @@ db.exec(`
     created_at TEXT NOT NULL,
     amount_raw TEXT,
     ref_code TEXT,
-    tx_hash TEXT
+    tx_hash TEXT,
+    from_address TEXT
   );
 `);
 const uid = "smoke_" + paymentId.slice(0, 8);
@@ -107,8 +105,8 @@ db.prepare(
 ).run(uid, "smoke@zei.test", "x", "free", null, new Date().toISOString(), new Date().toISOString());
 
 db.prepare(
-  `INSERT INTO payments (id,user_id,provider,invoice_id,amount,currency,status,raw_json,created_at,amount_raw,ref_code,tx_hash)
-   VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL)`,
+  `INSERT INTO payments (id,user_id,provider,invoice_id,amount,currency,status,raw_json,created_at,amount_raw,ref_code,tx_hash,from_address)
+   VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?)`,
 ).run(
   paymentId,
   uid,
@@ -117,16 +115,23 @@ db.prepare(
   Number(amountUsdc),
   "usdc",
   "waiting",
-  "{}",
+  JSON.stringify({ match: "from+amount" }),
   new Date().toISOString(),
   amountRaw.toString(),
-  ref,
+  null,
+  FROM,
 );
 
-const row = db.prepare(`SELECT amount_raw, ref_code, status FROM payments WHERE id=?`).get(paymentId);
+const row = db
+  .prepare(`SELECT amount_raw, from_address, status FROM payments WHERE id=?`)
+  .get(paymentId);
 console.log("db", row);
 if (row.amount_raw !== amountRaw.toString()) {
   console.error("FAIL: amount_raw mismatch");
+  process.exit(1);
+}
+if (row.from_address !== FROM) {
+  console.error("FAIL: from_address mismatch");
   process.exit(1);
 }
 
@@ -139,14 +144,39 @@ for (const c of CHAINS) {
   await sleep(250);
 }
 
-// Simulate match: pretend a tx with our amount exists
-const fakeValue = amountRaw.toString();
-const matched = BigInt(fakeValue) === amountRaw;
-console.log("amount match logic", matched ? "OK" : "FAIL");
+// Simulate match: from + amount within tolerance
+function matches(tx) {
+  const value = BigInt(tx.value);
+  const diff = value > amountRaw ? value - amountRaw : amountRaw - value;
+  return (
+    tx.from.toLowerCase() === FROM &&
+    tx.to.toLowerCase() === address.toLowerCase() &&
+    diff <= TOLERANCE
+  );
+}
+const fakeOk = matches({
+  from: FROM,
+  to: address,
+  value: amountRaw.toString(),
+});
+const fakeNear = matches({
+  from: FROM,
+  to: address,
+  value: (amountRaw + 1n).toString(),
+});
+const fakeWrongFrom = !matches({
+  from: "0x2222222222222222222222222222222222222222",
+  to: address,
+  value: amountRaw.toString(),
+});
+console.log("from+amount match", fakeOk && fakeNear && fakeWrongFrom ? "OK" : "FAIL");
 
 db.close();
 fs.unlinkSync(path.join(dataDir, "zei-smoke.db"));
 
+if (!(fakeOk && fakeNear && fakeWrongFrom)) {
+  process.exit(1);
+}
 if (fails) {
   console.error(`FAIL: ${fails} chain(s) failed`);
   process.exit(1);

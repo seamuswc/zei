@@ -856,12 +856,19 @@ select {
   color: var(--ink-soft);
 }
 
-.pay-qr {
+.pay-steps {
+  margin: 0;
+  padding: 0.65rem 0.85rem 0.65rem 1.6rem;
   display: grid;
-  place-items: center;
-  padding: 0.75rem;
-  background: #fff;
+  gap: 0.35rem;
   border: 1px solid var(--line);
+  background: color-mix(in oklab, var(--paper) 88%, white);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.pay-steps li {
+  padding-left: 0.15rem;
 }
 
 .pay-facts {
@@ -890,8 +897,39 @@ select {
   word-break: break-all;
 }
 
-.pay-addr {
-  font-size: 0.78rem !important;
+.pay-price {
+  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pay-wallet-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pay-chain {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pay-chain__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.pay-chain select {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
 }
 
 .readonly-banner {

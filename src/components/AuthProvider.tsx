@@ -107,9 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       paymentId: data.paymentId,
       address: data.address,
       amountUsdc: data.amountUsdc,
-      ref: data.ref,
-      qrDataUrl: data.qrDataUrl,
-      eip681: data.eip681,
+      amountRaw: data.amountRaw,
+      fromAddress: data.fromAddress ?? null,
       chains: data.chains,
       allowDevConfirm: data.allowDevConfirm,
     });

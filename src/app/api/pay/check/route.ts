@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       paymentId?: string;
       devConfirm?: boolean;
+      chainId?: number;
     };
     if (!body.paymentId) {
       return NextResponse.json({ error: "paymentId required" }, { status: 400 });
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
     const result = await verifyUsdcPayment({
       paymentId: body.paymentId,
       userId: user.id,
+      preferChainId:
+        typeof body.chainId === "number" && Number.isFinite(body.chainId)
+          ? body.chainId
+          : undefined,
     });
     return NextResponse.json(result);
   } catch (e) {

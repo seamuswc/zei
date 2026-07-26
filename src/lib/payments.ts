@@ -1,10 +1,12 @@
 import { getDb } from "@/lib/db";
 import { unlockPro } from "@/lib/auth";
 import { randomBytes } from "crypto";
-import QRCode from "qrcode";
 
-/** Pro price in USDC (human units). Exact on-chain amount adds a unique micro suffix for matching. */
+/** Pro price in USDC (human units). Matched with sender wallet + this clean amount. */
 export const PRO_USDC = Number(process.env.ZEI_PRO_PRICE_USDC || 20);
+
+/** Allow tiny rounding drift vs exact Pro price (0.01 USDC). */
+const AMOUNT_TOLERANCE_RAW = 10_000n;
 
 export type PayChain = {
   id: number;
@@ -60,10 +62,8 @@ export type UsdcInvoice = {
   address: string;
   amountUsdc: string;
   amountRaw: string;
-  ref: string;
-  chains: Array<{ id: number; name: string }>;
-  qrDataUrl: string;
-  eip681: string;
+  fromAddress: string | null;
+  chains: Array<{ id: number; name: string; usdc: string }>;
   allowDevConfirm: boolean;
 };
 
@@ -81,89 +81,59 @@ export function receiveAddress(): string {
   return addr;
 }
 
-function usernameFromEmail(email: string): string {
-  const local = email.split("@")[0] || "user";
-  return local.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 24) || "user";
+function proAmountRaw(): bigint {
+  return BigInt(Math.round(PRO_USDC * 1_000_000));
 }
 
-function formatUsdc(raw: bigint): string {
-  const whole = raw / 1_000_000n;
-  const frac = (raw % 1_000_000n).toString().padStart(6, "0");
-  return `${whole}.${frac}`;
+/** Human display without unique micros — e.g. "20" or "19.5". */
+export function formatProUsdc(): string {
+  const n = PRO_USDC;
+  if (!Number.isFinite(n) || n <= 0) return "20";
+  return Number.isInteger(n) ? String(n) : String(n);
 }
 
-function eip681Transfer(
-  chain: PayChain,
-  to: string,
-  amountRaw: bigint,
-): string {
-  return `ethereum:${chain.usdc}@${chain.id}/transfer?address=${to}&uint256=${amountRaw}`;
-}
-
-/** Unique on-chain amount unused by any waiting payment. */
-function allocateAmountRaw(paymentId: string): bigint {
-  const db = getDb();
-  const base = BigInt(Math.round(PRO_USDC * 1_000_000));
-  const used = new Set(
-    (
-      db
-        .prepare(
-          `SELECT amount_raw FROM payments
-           WHERE status = 'waiting' AND amount_raw IS NOT NULL`,
-        )
-        .all() as Array<{ amount_raw: string }>
-    ).map((r) => r.amount_raw),
-  );
-
-  for (let i = 0; i < 50; i++) {
-    const seed = paymentId + (i ? `:${i}` : "");
-    const hex = Buffer.from(seed).toString("hex").slice(0, 8);
-    const micro = (BigInt("0x" + hex) % 999999n) + 1n;
-    const raw = base + micro;
-    if (!used.has(raw.toString())) return raw;
+function normalizeAddress(addr: string): string {
+  const a = addr.trim().toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(a)) {
+    throw new Error("Invalid wallet address");
   }
-  // Fallback: time-based micro
-  const raw = base + (BigInt(Date.now() % 999999) + 1n);
-  return raw;
+  return a;
+}
+
+function amountClose(value: bigint, want: bigint): boolean {
+  const diff = value > want ? value - want : want - value;
+  return diff <= AMOUNT_TOLERANCE_RAW;
 }
 
 export async function createUsdcInvoice(options: {
   userId: string;
-  email: string;
+  /** Kept for API compatibility with callers. */
+  email?: string;
+  fromAddress?: string;
 }): Promise<UsdcInvoice> {
   const address = receiveAddress();
   const paymentId = randomBytes(12).toString("hex");
-  const amountRaw = allocateAmountRaw(paymentId);
-  const amountUsdc = formatUsdc(amountRaw);
-  const user = usernameFromEmail(options.email);
-  const ref = `ZEI:${user}:${paymentId.slice(0, 8)}`;
-
-  const qrChain =
-    USDC_CHAINS.find((c) => c.id === 8453) ?? USDC_CHAINS[0];
-  const eip681 = eip681Transfer(qrChain, address, amountRaw);
-
-  // EIP-681 URI so wallets that support it prefill token, chain, destination, amount.
-  const qrDataUrl = await QRCode.toDataURL(eip681, {
-    margin: 1,
-    width: 240,
-    errorCorrectionLevel: "M",
-  });
+  const amountRaw = proAmountRaw();
+  const amountUsdc = formatProUsdc();
+  const fromAddress = options.fromAddress
+    ? normalizeAddress(options.fromAddress)
+    : null;
 
   const db = getDb();
   db.prepare(
     `INSERT INTO payments (
       id, user_id, provider, invoice_id, amount, currency, status, raw_json, created_at,
-      amount_raw, ref_code, tx_hash
-    ) VALUES (?, ?, 'usdc', ?, ?, 'usdc', 'waiting', ?, ?, ?, ?, NULL)`,
+      amount_raw, ref_code, tx_hash, from_address
+    ) VALUES (?, ?, 'usdc', ?, ?, 'usdc', 'waiting', ?, ?, ?, NULL, NULL, ?)`,
   ).run(
     paymentId,
     options.userId,
     paymentId,
     Number(amountUsdc),
-    JSON.stringify({ ref, eip681, qrChain: qrChain.id, address }),
+    JSON.stringify({ address, match: "from+amount" }),
     new Date().toISOString(),
     amountRaw.toString(),
-    ref,
+    fromAddress,
   );
 
   return {
@@ -172,12 +142,44 @@ export async function createUsdcInvoice(options: {
     address,
     amountUsdc,
     amountRaw: amountRaw.toString(),
-    ref,
-    chains: USDC_CHAINS.map((c) => ({ id: c.id, name: c.name })),
-    qrDataUrl,
-    eip681,
+    fromAddress,
+    chains: USDC_CHAINS.map((c) => ({
+      id: c.id,
+      name: c.name,
+      usdc: c.usdc,
+    })),
     allowDevConfirm: process.env.ALLOW_DEV_PAY === "1",
   };
+}
+
+/** Bind the connected payer wallet to a waiting invoice (logged-in owner only). */
+export function bindPaymentFromAddress(options: {
+  paymentId: string;
+  userId: string;
+  fromAddress: string;
+}): { ok: true; fromAddress: string } {
+  const fromAddress = normalizeAddress(options.fromAddress);
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT id, user_id, status FROM payments WHERE id = ?`,
+    )
+    .get(options.paymentId) as
+    | { id: string; user_id: string; status: string }
+    | undefined;
+
+  if (!row || row.user_id !== options.userId) {
+    throw new Error("Payment not found");
+  }
+  if (row.status !== "waiting") {
+    throw new Error("Payment is no longer waiting");
+  }
+
+  db.prepare(
+    `UPDATE payments SET from_address = ? WHERE id = ? AND user_id = ? AND status = 'waiting'`,
+  ).run(fromAddress, options.paymentId, options.userId);
+
+  return { ok: true, fromAddress };
 }
 
 type TokenTx = {
@@ -235,7 +237,6 @@ async function fetchUsdcIncoming(
       return [];
     }
     if (data.status === "0" && data.message === "NOTOK") {
-      // Unsupported chain / soft error — skip
       return [];
     }
     return [];
@@ -268,7 +269,6 @@ function markFinished(options: {
   chainId?: number;
   from?: string;
   value?: string;
-  ref?: string | null;
 }) {
   const db = getDb();
   db.prepare(
@@ -278,7 +278,6 @@ function markFinished(options: {
   ).run(
     options.txHash,
     JSON.stringify({
-      ref: options.ref,
       chainId: options.chainId,
       chain: options.chainName,
       from: options.from,
@@ -290,10 +289,11 @@ function markFinished(options: {
   unlockPro(options.userId, 365);
 }
 
-/** Scan ETH + L2s sequentially (free Etherscan = 5 req/s). */
+/** Scan ETH + L2s sequentially (free Etherscan = 5 req/s). Match from + amount. */
 export async function verifyUsdcPayment(options: {
   paymentId: string;
   userId: string;
+  preferChainId?: number;
 }): Promise<
   | { ok: true; txHash: string; chain: string }
   | { ok: false; status: "waiting" | "missing"; message: string }
@@ -301,7 +301,7 @@ export async function verifyUsdcPayment(options: {
   const db = getDb();
   const row = db
     .prepare(
-      `SELECT id, user_id, status, amount_raw, ref_code, created_at, tx_hash
+      `SELECT id, user_id, status, amount_raw, from_address, created_at, tx_hash
        FROM payments WHERE id = ?`,
     )
     .get(options.paymentId) as
@@ -310,7 +310,7 @@ export async function verifyUsdcPayment(options: {
         user_id: string;
         status: string;
         amount_raw: string | null;
-        ref_code: string | null;
+        from_address: string | null;
         created_at: string;
         tx_hash: string | null;
       }
@@ -334,15 +334,32 @@ export async function verifyUsdcPayment(options: {
       message: "Payment has no amount — create a new invoice.",
     };
   }
+  if (!row.from_address) {
+    return {
+      ok: false,
+      status: "waiting",
+      message: "Connect your wallet before we can match the payment.",
+    };
+  }
 
   const address = receiveAddress();
   const want = BigInt(row.amount_raw);
+  const fromWant = row.from_address.toLowerCase();
   const createdUnix =
     Math.floor(new Date(row.created_at).getTime() / 1000) - 600;
   const used = claimedTxHashes();
   const errors: string[] = [];
 
-  for (const chain of USDC_CHAINS) {
+  const chains = [...USDC_CHAINS];
+  if (options.preferChainId) {
+    chains.sort((a, b) => {
+      if (a.id === options.preferChainId) return -1;
+      if (b.id === options.preferChainId) return 1;
+      return 0;
+    });
+  }
+
+  for (const chain of chains) {
     try {
       const txs = await fetchUsdcIncoming(chain, address);
       for (const tx of txs) {
@@ -352,7 +369,8 @@ export async function verifyUsdcPayment(options: {
         } catch {
           continue;
         }
-        if (value !== want) continue;
+        if ((tx.from || "").toLowerCase() !== fromWant) continue;
+        if (!amountClose(value, want)) continue;
         if (Number(tx.timeStamp) < createdUnix) continue;
         if (used.has(tx.hash.toLowerCase())) continue;
 
@@ -364,7 +382,6 @@ export async function verifyUsdcPayment(options: {
           chainId: chain.id,
           from: tx.from,
           value: tx.value,
-          ref: row.ref_code,
         });
         return { ok: true, txHash: tx.hash, chain: chain.name };
       }
@@ -374,7 +391,7 @@ export async function verifyUsdcPayment(options: {
     await sleep(250);
   }
 
-  if (errors.length >= USDC_CHAINS.length) {
+  if (errors.length >= chains.length) {
     return {
       ok: false,
       status: "waiting",
@@ -386,7 +403,7 @@ export async function verifyUsdcPayment(options: {
     ok: false,
     status: "waiting",
     message:
-      "USDC not seen yet. Send the exact amount on ETH or any listed L2, wait ~1 min, then check again.",
+      "USDC not seen yet. After your wallet confirms the transfer, wait ~1 min, then check again.",
   };
 }
 
@@ -413,7 +430,6 @@ export function confirmDevPayment(options: {
     userId: row.user_id,
     txHash,
     chainName: "dev",
-    ref: null,
   });
   return { ok: true, txHash, chain: "dev" };
 }

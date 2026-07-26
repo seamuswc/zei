@@ -30,6 +30,9 @@ function migrate(db: Database.Database) {
     if (!payNames.has("tx_hash")) {
       db.exec(`ALTER TABLE payments ADD COLUMN tx_hash TEXT`);
     }
+    if (!payNames.has("from_address")) {
+      db.exec(`ALTER TABLE payments ADD COLUMN from_address TEXT`);
+    }
   }
 
   db.exec(`
@@ -97,7 +100,8 @@ export function getDb(): Database.Database {
       created_at TEXT NOT NULL,
       amount_raw TEXT,
       ref_code TEXT,
-      tx_hash TEXT
+      tx_hash TEXT,
+      from_address TEXT
     );
 
     CREATE TABLE IF NOT EXISTS email_tokens (

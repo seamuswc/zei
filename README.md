@@ -53,18 +53,18 @@ From **Tax year** / `#export` → download ZIP:
 ### 5. Accounts & Pro
 
 1. Register → verify email (`support.cryptozei.com` via Resend)  
-2. Pay **Pro (~20 USDC)** with QR / address  
-3. Pro unlocks **cloud ledger save** for ~1 year  
+2. Pay **Pro (`ZEI_PRO_PRICE_USDC`, default 20 USDC)** via connect-wallet → in-page USDC transfer  
+3. Pro unlocks **filing-year totals / accountant ZIP** for ~1 year  
 
 **USDC payment flow**
 
-1. App shows QR (receive address) + **exact** amount (20 USDC + unique micros so each invoice is unique)  
-2. Ref looks like `ZEI:username:abcd1234` (optional wallet memo)  
-3. User sends native **USDC** on Ethereum or an L2  
-4. **I’ve paid — check** scans Etherscan V2: ETH, Base, Arbitrum, Optimism, Polygon, Avalanche, Linea  
-5. Match = exact amount to your treasury → unlock Pro  
+1. Logged-in user opens Pro pay → invoice stores the **clean** Pro price (no unique micro-amount)  
+2. **Connect wallet** (EIP-1193 `window.ethereum` — MetaMask etc.; no WalletConnect in v1)  
+3. App binds `from_address` to that invoice, user picks a chain, confirms **USDC `transfer`** in the wallet  
+4. **I’ve paid — check** (and auto-poll) scans Etherscan V2: ETH, Base, Arbitrum, Optimism, Polygon, Avalanche, Linea  
+5. Match = transfer **from connected wallet → your treasury**, USDC amount ≈ Pro price (small tolerance), recent, unused tx → unlock Pro  
 
-Same EOA on every chain. No NOWPayments.
+Same receive EOA on every chain. Needs an injected browser wallet (mobile deep-link / WalletConnect not wired yet). No NOWPayments.
 
 ---
 
