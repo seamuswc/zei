@@ -15,7 +15,7 @@ const plex = IBM_Plex_Sans_JP({
 });
 
 const siteUrl =
-  process.env.APP_BASE_URL?.replace(/\/$/, "") || "https://cryptozei.com";
+  process.env.APP_BASE_URL?.replace(/\/$/, "") || "https://www.cryptozei.com";
 
 const titleJa = "ZEI — 日本居住者向け暗号資産の税務";
 const titleEn = "ZEI — Crypto tax for Japan residents";

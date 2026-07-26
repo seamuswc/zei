@@ -14,9 +14,22 @@ export const messages = {
     lang_toggle: "Language",
 
     wip_banner: "現在準備中です — まだ本番公開前です。見つけた方へ：もう少しお待ちください。",
+    freemium_banner:
+      "無料で取込・確認・過去年の税額を試せます。確定申告に使う{year}年分の合計・出力はProで解除。",
+    freemium_cta_login: "ログインしてProへ",
+    freemium_cta_pay: "USDCでProを解除",
+    freemium_locked_kicker: "申告年度 · Pro",
+    freemium_locked_title: "{year}年はProで解除",
+    freemium_locked_body:
+      "無料プランでは取込・台帳確認・他の年の計算は自由です。いま申告で使う{year}年の雑所得合計と税理士向けZIPだけがProです。",
+    freemium_export_locked:
+      "{year}年（申告年度）の税理士向けZIPはProで解除されます。他の年は無料で出力できます。",
+    freemium_table_locked: "申告年度の明細はProで表示されます。",
+    freemium_cell_locked: "Pro",
+    freemium_year_option: "{year} · Pro",
     hero_title: "日本居住者向け暗号資産の税務",
     hero_sub:
-      "暗号資産のみ対応。メール認証、暗号資産で決済、税理士に渡せるZIPを出力。確定申告の代わりではありません。",
+      "暗号資産のみ。無料で取込・確認・過去年まで試せます。申告年度の合計とZIP出力はPro（USDC）。確定申告の代わりではありません。",
     hero_cta_import: "取引を取り込む",
     hero_cta_export: "税理士向け出力",
     tax_rules: "税制の説明",
@@ -53,24 +66,27 @@ export const messages = {
     wallet_desc:
       "Ethereum（ネイティブ＋主要ERC-20）またはBitcoinをライブ取得し、円換算します。",
     wallet_address: "ウォレットアドレス",
-    wallet_etherscan: "Etherscan APIキー",
-    wallet_etherscan_ph: "etherscan.io/apikey の無料キー",
     wallet_sync: "接続して同期",
     wallet_syncing: "同期中…",
+    wallet_sync_wait:
+      "同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
     wallet_hint:
-      "EthereumにはEtherscanキーが必要です（またはサーバー環境変数 ETHERSCAN_API_KEY）。",
+      "アドレスを入れるだけです。Ethereumの照会はサーバー側で行います。APIキーは不要です。1件終わってから次のアドレスを追加できます。",
     wallet_linked: "接続済み: {address}",
+    wallet_sync_ok: "同期完了 · {chain} · {n}件（税額計算に反映）",
+    unlink: "解除",
 
     exchange_kicker: "03 · 取引所 · 読み取り専用API",
     exchange_title: "取引所を連携（かんたん）",
     exchange_desc:
-      "Excel/CSVでもOK。かんたんにするなら読み取り専用APIキー。出金・注文権限は絶対に付けないでください。キーは保存しません（この同期だけ使用）。",
+      "Excel/CSVでもOK。かんたんにするなら読み取り専用APIキー（日本・海外）。出金・注文権限は絶対に付けないでください。キーは保存しません（この同期だけ使用）。",
     exchange_readonly_title: "必ず読み取り専用キーを使う",
     exchange_readonly_body:
       "APIキー発行時は「照会／履歴／残高」のみON。「注文・取引・出金・送付」はすべてOFF。ZEIは秘密鍵をサーバーに保存しません。",
-    exchange_label: "日本の取引所",
+    exchange_label: "取引所",
     exchange_key: "APIキー（読み取り専用）",
     exchange_secret: "APIシークレット",
+    exchange_passphrase: "APIパスフレーズ（OKX / KuCoin）",
     exchange_connect: "読み取り同期",
     exchange_syncing: "同期中…",
     exchange_linked: "連携済み",
@@ -87,8 +103,20 @@ export const messages = {
     exchange_perm_binance:
       "Binance Japan: Enable Reading のみ。Trading・Withdrawals はOFF。",
     exchange_perm_zaif: "Zaif: 情報取得のみ。注文・出金権限は付けない。",
+    exchange_perm_binance_global:
+      "Binance（海外）: Enable Reading のみ。Trading・Withdrawals はOFF。USDT建て約定を円換算します。",
+    exchange_perm_bybit:
+      "Bybit: Read-Only。Trade / Withdraw はOFF。スポット約定を円換算します。",
+    exchange_perm_okx:
+      "OKX: Read のみ + パスフレーズ。Trade / Withdraw はOFF。",
+    exchange_perm_kraken:
+      "Kraken: Query / Query Funds のみ。Orders / Withdraw は付けない。",
+    exchange_perm_kucoin:
+      "KuCoin: General / Spot の読み取りのみ + パスフレーズ。Trade / Transfer はOFF。",
     exchange_hist_gmo:
       "注意: GMOのAPIは直近の約定が中心です。年間フル履歴はCSVも併用してください。",
+    exchange_hist_overseas:
+      "注意: 海外取引所はUSDT等をCoinGeckoで円換算します。年間フル履歴はCSV併用を推奨。",
 
     income_kicker: "暗号資産のみ",
     income_title: "任意：他の所得（税率の目安用）",
@@ -180,19 +208,28 @@ export const messages = {
     auth_back: "ログインに戻る",
     auth_send_reset: "リセットリンクを送信",
     auth_creating: "…",
+    auth_register_hint:
+      "作成後、確認メールを送信します。受信箱（迷惑メールも）のリンクを開いてからログインしてください。",
     auth_verified: "確認済み",
     auth_unverified: "未確認",
-    auth_pay: "USDCでPro（20）",
-    auth_save: "台帳を保存",
+    auth_pricing:
+      "無料：取込・確認・過去年の計算＋クラウド自動保存。Pro：申告年度{year}年の合計・税理士ZIPを解除。",
+    auth_plan_free: "Free（{year}年ロック）",
+    auth_plan_pro: "Pro",
+    auth_pay: "USDCでPro（申告年度を解除）",
+    auth_autosave_hint:
+      "メール確認済みのアカウントでは、取込・編集・クリアがクラウドに自動保存されます。",
     pay_title: "USDCでProを購入",
     pay_close: "閉じる",
     pay_lead:
-      "下のQRまたはアドレスに、表示の金額ぴったりでUSDCを送金してください。Ethereumおよび主要L2に対応。",
+      "申告年度の税額合計と税理士ZIPを解除します。対応ウォレットならQRスキャンでアドレスと金額が入ります。表示の金額ぴったりでUSDCを送金してください（Ethereumおよび主要L2）。",
+    pay_qr_hint:
+      "対応ウォレットではスキャンで送金先・金額が入ります。非対応の場合は下の金額とアドレスをコピーしてください。",
     pay_amount: "送金額（ぴったりの金額）",
     pay_address: "受取アドレス",
-    pay_ref: "照合用メモ（ユーザー情報）",
+    pay_ref: "照合用メモ（任意）",
     pay_ref_hint:
-      "ウォレットにメモ欄があればこの参照コードを入れてください。照合は主に金額で行います。",
+      "メモ欄があればこの参照コードを入れても構いません（任意）。照合は主に金額で行います。",
     pay_chains: "対応チェーン",
     pay_exact_warn:
       "端数まで含めた金額を正確に送ってください（あなた専用の照合用金額です）。",
@@ -208,8 +245,7 @@ export const messages = {
     auth_click_verify: "クリックして確認",
     auth_logged_in: "ログインしました。",
     auth_created:
-      "アカウントを作成しました。メールを確認してからログインしてください。",
-    auth_saved: "台帳を保存しました。",
+      "アカウントを作成しました。確認メールを送信済みです — 受信箱（と迷惑メール）を開き、リンクをクリックしてからログインしてください。届かない場合は「確認メールを再送」を押してください。",
     auth_verify_ok: "メール確認完了 — ログインできます。",
     auth_verify_bad: "確認リンクが無効または期限切れです。",
 
@@ -224,11 +260,13 @@ export const messages = {
     rules_now_5:
       "価格：国税庁の公式レート表なし。ZEIは取引所→オンチェーン／公開→CoinGecko→手動。",
     rules_next: "2028年1月頃〜（2026年度改正）",
+    rules_next_note:
+      "重要：すべての暗号資産が約20%になるわけではありません。一律約20.315%は、国内認可取引所で扱う「対象（適格）暗号資産」のみ。対象外はこれまでどおり累進課税（最大約55%）です。",
     rules_next_1:
-      "国内認可取引所の対象暗号資産：分離課税の一律約20.315%。",
-    rules_next_2: "損失繰越：対象資産は3年（見込み）。",
+      "適格資産のみ：国内認可取引所の対象銘柄 → 分離課税の一律約20.315%。",
+    rules_next_2: "損失繰越：対象（適格）資産のみ3年（見込み）。",
     rules_next_3:
-      "OTC・自己管理ウォレット・海外所・DEX・ステーキング・レンディング・エアドロ・NFTは引き続き累進（最大約55%）。",
+      "対象外の例：OTC・自己管理ウォレット・海外所・DEX・ステーキング・レンディング・エアドロ・NFT → 引き続き累進（最大約55%）。",
     rules_notax: "非課税（支配権が変わらない）",
     rules_pill_wrap: "ラップ（ETH→WETH）",
     rules_pill_bridge: "ブリッジ",
@@ -267,6 +305,7 @@ export const messages = {
 
     live: "ライブ",
     region_japan: "日本",
+    region_overseas: "海外",
   },
   en: {
     brand: "ZEI",
@@ -282,9 +321,22 @@ export const messages = {
 
     wip_banner:
       "Still under construction — not launched yet. If you found this early: hang tight.",
+    freemium_banner:
+      "Free: import, review, and try every year except the {year} filing year. Pro unlocks that year’s totals and export.",
+    freemium_cta_login: "Log in for Pro",
+    freemium_cta_pay: "Unlock Pro with USDC",
+    freemium_locked_kicker: "Filing year · Pro",
+    freemium_locked_title: "{year} unlocks with Pro",
+    freemium_locked_body:
+      "Free lets you import, edit the ledger, and run any other year. Only the {year} filing-year totals and accountant ZIP need Pro.",
+    freemium_export_locked:
+      "Accountant ZIP for {year} (the filing year) is Pro. Other years export for free.",
+    freemium_table_locked: "Filing-year detail is shown with Pro.",
+    freemium_cell_locked: "Pro",
+    freemium_year_option: "{year} · Pro",
     hero_title: "Crypto tax for Japan residents",
     hero_sub:
-      "Crypto only — verify email, pay in crypto, export a ZIP your tax accountant can open. Not a full tax return.",
+      "Crypto only. Free to import, review, and try past years — Pro (USDC) unlocks the filing year’s totals and ZIP. Not a full tax return.",
     hero_cta_import: "Import activity",
     hero_cta_export: "Accountant export",
     tax_rules: "Tax rules",
@@ -319,26 +371,29 @@ export const messages = {
     wallet_kicker: "02 · On-chain · live",
     wallet_title: "Connect wallet",
     wallet_desc:
-      "Live read: Ethereum native + major ERC-20 (Etherscan) or Bitcoin, priced to JPY.",
+      "Live read: Ethereum native + major ERC-20, or Bitcoin — priced to JPY.",
     wallet_address: "Wallet address",
-    wallet_etherscan: "Etherscan API key",
-    wallet_etherscan_ph: "Free key from etherscan.io/apikey",
     wallet_sync: "Connect & sync",
-    wallet_syncing: "Syncing live…",
+    wallet_syncing: "Syncing…",
+    wallet_sync_wait:
+      "Sync in progress — please wait. You can’t add another address until this finishes.",
     wallet_hint:
-      "Ethereum needs an Etherscan key here, or set ETHERSCAN_API_KEY in the server env.",
+      "Paste an address only. Ethereum lookups use the server — no API key needed. Add another address after this sync completes.",
     wallet_linked: "Linked: {address}",
+    wallet_sync_ok: "Synced · {chain} · {n} rows (added to tax calc)",
+    unlink: "Unlink",
 
     exchange_kicker: "03 · Exchange · read-only API",
     exchange_title: "Link exchange (easiest)",
     exchange_desc:
-      "CSV/Excel works too. Easier: paste a read-only exchange API key. Never enable trade or withdraw. Keys are not stored — used only for this sync.",
+      "CSV/Excel works too. Easier: paste a read-only API key (Japan or overseas). Never enable trade or withdraw. Keys are not stored — used only for this sync.",
     exchange_readonly_title: "Read-only API keys only",
     exchange_readonly_body:
       "When creating a key, enable view/history/balance only. Turn OFF order, trade, withdraw, and send. ZEI never stores your secret.",
-    exchange_label: "Japan exchange",
+    exchange_label: "Exchange",
     exchange_key: "API key (read-only)",
     exchange_secret: "API secret",
+    exchange_passphrase: "API passphrase (OKX / KuCoin)",
     exchange_connect: "Sync read-only",
     exchange_syncing: "Syncing…",
     exchange_linked: "Linked",
@@ -357,8 +412,20 @@ export const messages = {
       "Binance Japan: Enable Reading only. Disable Trading and Withdrawals.",
     exchange_perm_zaif:
       "Zaif: info/history only. Do not enable order or withdraw.",
+    exchange_perm_binance_global:
+      "Binance (global): Enable Reading only. No Trading or Withdrawals. USDT fills are converted to JPY.",
+    exchange_perm_bybit:
+      "Bybit: Read-Only. No Trade or Withdraw. Spot fills converted to JPY.",
+    exchange_perm_okx:
+      "OKX: Read only + passphrase. No Trade or Withdraw.",
+    exchange_perm_kraken:
+      "Kraken: Query / Query Funds only. No Orders or Withdraw.",
+    exchange_perm_kucoin:
+      "KuCoin: General/Spot read only + passphrase. No Trade or Transfer.",
     exchange_hist_gmo:
       "Note: GMO’s API mainly covers recent fills. Use CSV for a full tax year.",
+    exchange_hist_overseas:
+      "Note: Overseas venues convert USDT (etc.) to JPY via CoinGecko. Prefer CSV for a full tax year.",
 
     income_kicker: "Crypto only",
     income_title: "Optional: other income for a rough rate check",
@@ -450,19 +517,28 @@ export const messages = {
     auth_back: "Back to log in",
     auth_send_reset: "Send reset link",
     auth_creating: "…",
+    auth_register_hint:
+      "We’ll email you a verification link. Open it (check spam too) before you log in.",
     auth_verified: "Verified",
     auth_unverified: "Unverified",
-    auth_pay: "Pay USDC (Pro · 20)",
-    auth_save: "Save ledger",
+    auth_pricing:
+      "Free: import, review, past years, and cloud autosave. Pro: unlock {year} filing-year totals and accountant ZIP.",
+    auth_plan_free: "Free ({year} locked)",
+    auth_plan_pro: "Pro",
+    auth_pay: "Pay USDC (unlock filing year)",
+    auth_autosave_hint:
+      "With a verified email, imports, edits, and clears autosave to your account.",
     pay_title: "Pay Pro with USDC",
     pay_close: "Close",
     pay_lead:
-      "Scan the QR or send USDC to the address for the exact amount shown. Works on Ethereum and major L2s.",
+      "Unlocks filing-year totals and accountant ZIP. Scan the QR to fill address and amount in wallets that support EIP-681. Still send the exact USDC amount shown (Ethereum and major L2s).",
+    pay_qr_hint:
+      "Supported wallets fill destination and amount from the scan. Otherwise copy the amount and address below.",
     pay_amount: "Exact amount",
     pay_address: "Receive address",
-    pay_ref: "Your payment ref (username)",
+    pay_ref: "Payment ref (optional)",
     pay_ref_hint:
-      "Paste this ref in the wallet memo if available. Matching is primarily by the exact amount.",
+      "Optional — paste this ref in the wallet memo if you have one. Matching is primarily by the exact amount.",
     pay_chains: "Supported chains",
     pay_exact_warn:
       "Send the exact amount including decimals — it uniquely identifies your payment.",
@@ -477,8 +553,8 @@ export const messages = {
     auth_dev_link: "Dev verify link:",
     auth_click_verify: "click to verify",
     auth_logged_in: "Logged in.",
-    auth_created: "Account created. Verify your email, then log in.",
-    auth_saved: "Ledger saved.",
+    auth_created:
+      "Account created. A verification email was sent — open your inbox (and spam), click the link, then log in. If nothing arrives, use “Resend verify email”.",
     auth_verify_ok: "Email verified — you can log in.",
     auth_verify_bad: "Verification link invalid or expired.",
 
@@ -493,11 +569,13 @@ export const messages = {
     rules_now_5:
       "Prices: no official NTA table — ZEI uses exchange → on-chain/public → CoinGecko → manual.",
     rules_next: "From ~Jan 2028 (2026 reform)",
+    rules_next_note:
+      "Important: not all crypto is taxed at ~20%. The flat ~20.315% rate applies only to eligible assets on Japan-licensed exchanges. Everything else stays progressive (up to ~55%).",
     rules_next_1:
-      "Eligible assets on Japan-licensed exchanges: flat 20.315% separate taxation.",
+      "Eligible only: designated assets on Japan-licensed exchanges → flat 20.315% separate taxation.",
     rules_next_2: "Loss carryforward: 3 years (eligible assets only).",
     rules_next_3:
-      "Still progressive (up to 55%): OTC, private wallets, overseas exchanges, DEXs, staking, lending, airdrops, NFTs.",
+      "Not eligible (examples): OTC, private wallets, overseas exchanges, DEXs, staking, lending, airdrops, NFTs → still progressive (up to ~55%).",
     rules_notax: "Not taxed (ownership unchanged)",
     rules_pill_wrap: "Wrapping ETH→WETH",
     rules_pill_bridge: "Bridging chains",
@@ -536,6 +614,7 @@ export const messages = {
 
     live: "live",
     region_japan: "Japan",
+    region_overseas: "Overseas",
   },
 } as const;
 

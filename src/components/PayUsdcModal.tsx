@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "./I18nProvider";
 
 export type UsdcInvoiceClient = {
@@ -20,19 +21,34 @@ type Props = {
   onPaid: () => void;
 };
 
+const AUTO_POLL_MS = 9000;
+
 export function PayUsdcModal({ invoice, onClose, onPaid }: Props) {
   const { t } = useI18n();
+  const [mounted, setMounted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [paid, setPaid] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState<"addr" | "amt" | "ref" | null>(null);
+  const busyRef = useRef(false);
+  const paidRef = useRef(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [onClose]);
 
   async function copy(text: string, kind: "addr" | "amt" | "ref") {
@@ -45,55 +61,81 @@ export function PayUsdcModal({ invoice, onClose, onPaid }: Props) {
     }
   }
 
-  async function check(devConfirm = false) {
-    setBusy(true);
-    setMsg(null);
-    setErr(null);
-    try {
-      const res = await fetch("/api/pay/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentId: invoice.paymentId,
-          devConfirm: devConfirm || undefined,
-        }),
-      });
-      const data = (await res.json()) as {
-        error?: string;
-        ok?: boolean;
-        txHash?: string;
-        chain?: string;
-        message?: string;
-      };
-      if (!res.ok) throw new Error(data.error || "Check failed");
-      if (data.ok) {
-        setMsg(
-          t("pay_confirmed", {
-            chain: data.chain || "",
-            tx: (data.txHash || "").slice(0, 18),
-          }),
-        );
-        onPaid();
-      } else {
-        setErr(data.message || t("pay_waiting"));
+  const check = useCallback(
+    async (devConfirm = false, opts?: { quiet?: boolean }) => {
+      if (busyRef.current || paidRef.current) return;
+      busyRef.current = true;
+      setBusy(true);
+      if (!opts?.quiet) {
+        setMsg(null);
+        setErr(null);
       }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Check failed");
-    } finally {
-      setBusy(false);
-    }
-  }
+      try {
+        const res = await fetch("/api/pay/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentId: invoice.paymentId,
+            devConfirm: devConfirm || undefined,
+          }),
+        });
+        const data = (await res.json()) as {
+          error?: string;
+          ok?: boolean;
+          txHash?: string;
+          chain?: string;
+          message?: string;
+        };
+        if (!res.ok) throw new Error(data.error || "Check failed");
+        if (data.ok) {
+          paidRef.current = true;
+          setPaid(true);
+          setErr(null);
+          setMsg(
+            t("pay_confirmed", {
+              chain: data.chain || "",
+              tx: (data.txHash || "").slice(0, 18),
+            }),
+          );
+          onPaid();
+        } else if (!opts?.quiet) {
+          setErr(data.message || t("pay_waiting"));
+        }
+      } catch (e) {
+        if (!opts?.quiet) {
+          setErr(e instanceof Error ? e.message : "Check failed");
+        }
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    },
+    [invoice.paymentId, onPaid, t],
+  );
 
-  return (
+  useEffect(() => {
+    if (paid) return;
+    const id = window.setInterval(() => {
+      void check(false, { quiet: true });
+    }, AUTO_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [check, paid]);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="pay-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pay-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
+      <button
+        type="button"
+        className="pay-modal__backdrop"
+        aria-label={t("pay_close")}
+        onClick={onClose}
+      />
       <div className="pay-sheet">
         <header className="pay-sheet__head">
           <div>
@@ -116,11 +158,12 @@ export function PayUsdcModal({ invoice, onClose, onPaid }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={invoice.qrDataUrl}
-              alt="USDC payment address QR"
+              alt="USDC payment QR"
               width={240}
               height={240}
             />
           </div>
+          <p className="field-hint">{t("pay_qr_hint")}</p>
 
           <dl className="pay-facts">
             <div>
@@ -171,20 +214,34 @@ export function PayUsdcModal({ invoice, onClose, onPaid }: Props) {
           </p>
           <p className="status-warn">{t("pay_exact_warn")}</p>
 
+          {busy && (
+            <p className="pay-check-banner" role="status" aria-live="polite">
+              <span className="spinner" aria-hidden />
+              {t("pay_checking")}
+            </p>
+          )}
+
           <div className="import-actions">
             <button
               type="button"
               className="btn btn--solid"
-              disabled={busy}
+              disabled={busy || paid}
               onClick={() => void check(false)}
             >
-              {busy ? t("pay_checking") : t("pay_check")}
+              {busy ? (
+                <span className="btn-loading">
+                  <span className="spinner" aria-hidden />
+                  {t("pay_checking")}
+                </span>
+              ) : (
+                t("pay_check")
+              )}
             </button>
             {invoice.allowDevConfirm && (
               <button
                 type="button"
                 className="btn btn--ghost"
-                disabled={busy}
+                disabled={busy || paid}
                 onClick={() => void check(true)}
               >
                 {t("pay_dev_confirm")}
@@ -196,6 +253,7 @@ export function PayUsdcModal({ invoice, onClose, onPaid }: Props) {
           {err && <p className="status-err-line">{err}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

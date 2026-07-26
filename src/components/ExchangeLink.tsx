@@ -6,18 +6,23 @@ import { EXCHANGES } from "@/lib/import/exchange-live";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
+const japanExchanges = EXCHANGES.filter((e) => e.region === "Japan");
+const overseasExchanges = EXCHANGES.filter((e) => e.region === "Overseas");
+
 export function ExchangeLink() {
-  const { addTxs, linkedExchanges, markExchangeLinked } = usePortfolio();
+  const { addTxs, markExchangeLinked } = usePortfolio();
   const { t } = useI18n();
   const [selected, setSelected] = useState("bitflyer");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const exchange = EXCHANGES.find((e) => e.id === selected) ?? EXCHANGES[0];
+  const needsPassphrase = Boolean(exchange.needsPassphrase);
 
   async function onLink() {
     setBusy(true);
@@ -32,6 +37,7 @@ export function ExchangeLink() {
           exchange: selected,
           apiKey: apiKey.trim(),
           apiSecret: apiSecret.trim(),
+          passphrase: needsPassphrase ? passphrase.trim() : undefined,
         }),
       });
       const data = (await res.json()) as {
@@ -52,6 +58,7 @@ export function ExchangeLink() {
       if (data.warning) setWarning(data.warning);
       setApiKey("");
       setApiSecret("");
+      setPassphrase("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Exchange sync failed");
     } finally {
@@ -75,11 +82,20 @@ export function ExchangeLink() {
       <label className="field">
         <span>{t("exchange_label")}</span>
         <select value={selected} onChange={(e) => setSelected(e.target.value)}>
-          {EXCHANGES.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {ex.name} · {t("region_japan")}
-            </option>
-          ))}
+          <optgroup label={t("region_japan")}>
+            {japanExchanges.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label={t("region_overseas")}>
+            {overseasExchanges.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.name}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </label>
 
@@ -106,6 +122,7 @@ export function ExchangeLink() {
           spellCheck={false}
           autoComplete="off"
           placeholder="read-only"
+          disabled={busy}
         />
       </label>
       <label className="field">
@@ -116,8 +133,22 @@ export function ExchangeLink() {
           onChange={(e) => setApiSecret(e.target.value)}
           spellCheck={false}
           autoComplete="off"
+          disabled={busy}
         />
       </label>
+      {needsPassphrase && (
+        <label className="field">
+          <span>{t("exchange_passphrase")}</span>
+          <input
+            type="password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            spellCheck={false}
+            autoComplete="off"
+            disabled={busy}
+          />
+        </label>
+      )}
 
       <div className="import-actions">
         <button
@@ -127,15 +158,18 @@ export function ExchangeLink() {
             busy ||
             !apiKey.trim() ||
             !apiSecret.trim() ||
-            linkedExchanges.includes(selected)
+            (needsPassphrase && !passphrase.trim())
           }
           onClick={() => void onLink()}
         >
-          {busy
-            ? t("exchange_syncing")
-            : linkedExchanges.includes(selected)
-              ? t("exchange_linked")
-              : t("exchange_connect")}
+          {busy ? (
+            <span className="btn-loading">
+              <span className="spinner" aria-hidden />
+              {t("exchange_syncing")}
+            </span>
+          ) : (
+            t("exchange_connect")
+          )}
         </button>
       </div>
 

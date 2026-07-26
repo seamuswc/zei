@@ -87,12 +87,19 @@ export async function resolveJpyUnitPrice(
   const base = coingeckoBase();
   const headers = coingeckoHeaders();
   // Demo key: lighter throttle; public unauthenticated: be polite
-  await sleep(process.env.COINGECKO_API_KEY ? 120 : 320);
+  await sleep(process.env.COINGECKO_API_KEY ? 150 : 350);
   const histUrl = `${base}/coins/${coinId}/history?date=${date}&localization=false`;
-  const histRes = await fetch(histUrl, {
+  let histRes = await fetch(histUrl, {
     headers,
     next: { revalidate: 86400 },
   });
+  if (histRes.status === 429 || histRes.status === 400) {
+    await sleep(800);
+    histRes = await fetch(histUrl, {
+      headers,
+      next: { revalidate: 86400 },
+    });
+  }
   if (histRes.ok) {
     const data = (await histRes.json()) as {
       market_data?: { current_price?: { jpy?: number } };
@@ -105,9 +112,13 @@ export async function resolveJpyUnitPrice(
     }
   }
 
-  await sleep(process.env.COINGECKO_API_KEY ? 120 : 320);
+  await sleep(process.env.COINGECKO_API_KEY ? 150 : 350);
   const spotUrl = `${base}/simple/price?ids=${coinId}&vs_currencies=jpy`;
-  const spotRes = await fetch(spotUrl, { headers, cache: "no-store" });
+  let spotRes = await fetch(spotUrl, { headers, cache: "no-store" });
+  if (spotRes.status === 429 || spotRes.status === 400) {
+    await sleep(800);
+    spotRes = await fetch(spotUrl, { headers, cache: "no-store" });
+  }
   if (!spotRes.ok) {
     throw new Error(`CoinGecko failed for ${assetKey} (${spotRes.status})`);
   }
@@ -125,4 +136,68 @@ export async function jpyUnitPrice(
   coinIdOverride?: string,
 ): Promise<{ jpy: number; source: PriceSource }> {
   return resolveJpyUnitPrice(asset, isoDate, { coinId: coinIdOverride });
+}
+
+/**
+ * One CoinGecko range call → daily JPY map (fast wallet sync).
+ * Falls back to a single spot price applied to all dates.
+ */
+export async function loadDailyJpySeries(
+  coinId: string,
+  fromIso: string,
+  toIso: string,
+): Promise<{ byDate: Map<string, number>; source: PriceSource }> {
+  const from = Math.floor(new Date(`${fromIso}T00:00:00Z`).getTime() / 1000);
+  const to = Math.ceil(new Date(`${toIso}T23:59:59Z`).getTime() / 1000);
+  const base = coingeckoBase();
+  const headers = coingeckoHeaders();
+  await sleep(process.env.COINGECKO_API_KEY ? 120 : 280);
+  const url = `${base}/coins/${coinId}/market_chart/range?vs_currency=jpy&from=${from}&to=${to}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  const byDate = new Map<string, number>();
+
+  if (res.ok) {
+    const data = (await res.json()) as { prices?: [number, number][] };
+    for (const row of data.prices ?? []) {
+      const [ts, price] = row;
+      if (!(price > 0)) continue;
+      const day = new Date(ts).toISOString().slice(0, 10);
+      byDate.set(day, price);
+    }
+    if (byDate.size > 0) {
+      return { byDate, source: "coingecko_history" };
+    }
+  }
+
+  await sleep(process.env.COINGECKO_API_KEY ? 120 : 280);
+  const spotUrl = `${base}/simple/price?ids=${coinId}&vs_currencies=jpy`;
+  const spotRes = await fetch(spotUrl, { headers, cache: "no-store" });
+  if (!spotRes.ok) {
+    throw new Error(`CoinGecko failed for ${coinId} (${spotRes.status})`);
+  }
+  const spot = (await spotRes.json()) as Record<string, { jpy?: number }>;
+  const jpy = spot[coinId]?.jpy;
+  if (!(jpy && jpy > 0)) throw new Error(`No JPY price for ${coinId}`);
+  // Apply spot to the range endpoints so callers always find a value
+  byDate.set(fromIso, jpy);
+  byDate.set(toIso, jpy);
+  return { byDate, source: "coingecko_spot" };
+}
+
+/** Nearest prior (or next) daily price from a series map. */
+export function nearestDailyJpy(
+  byDate: Map<string, number>,
+  isoDate: string,
+): number | null {
+  const hit = byDate.get(isoDate);
+  if (hit != null && hit > 0) return hit;
+  const keys = [...byDate.keys()].sort();
+  if (keys.length === 0) return null;
+  let best: string | null = null;
+  for (const k of keys) {
+    if (k <= isoDate) best = k;
+    else break;
+  }
+  if (best) return byDate.get(best) ?? null;
+  return byDate.get(keys[0]) ?? null;
 }

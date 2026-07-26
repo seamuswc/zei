@@ -1,6 +1,10 @@
-import type { CryptoTx } from "@/lib/tax/types";
-import { ERC20_SYMBOLS } from "@/lib/import/prices";
-import { resolveWalletUnitPrice } from "@/lib/import/onchain-price";
+import type { CryptoTx, PriceSource } from "@/lib/tax/types";
+import {
+  ERC20_SYMBOLS,
+  coinIdForAsset,
+  loadDailyJpySeries,
+  nearestDailyJpy,
+} from "@/lib/import/prices";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 
 function uid(prefix: string): string {
@@ -45,7 +49,6 @@ async function etherscanGet(
   apiKey: string,
 ): Promise<unknown> {
   const q = new URLSearchParams({ ...params, apikey: apiKey });
-  // Prefer v2
   const v2 = `https://api.etherscan.io/v2/api?chainid=1&${q.toString()}`;
   let res = await fetch(v2, { cache: "no-store" });
   let data = (await res.json()) as {
@@ -61,6 +64,35 @@ async function etherscanGet(
   return data;
 }
 
+type Series = { byDate: Map<string, number>; source: PriceSource };
+
+async function loadSeriesForCoin(
+  coinId: string,
+  dates: string[],
+): Promise<Series | null> {
+  if (dates.length === 0) return null;
+  const sorted = [...dates].sort();
+  try {
+    return await loadDailyJpySeries(
+      coinId,
+      sorted[0],
+      sorted[sorted.length - 1],
+    );
+  } catch {
+    return null;
+  }
+}
+
+function priceFromSeries(
+  series: Series | null,
+  date: string,
+): { jpy: number; source: PriceSource } {
+  if (!series) return { jpy: 0, source: "unknown" };
+  const jpy = nearestDailyJpy(series.byDate, date);
+  if (jpy == null || !(jpy > 0)) return { jpy: 0, source: "unknown" };
+  return { jpy, source: series.source };
+}
+
 export async function fetchEthereumWalletTxs(
   address: string,
   etherscanApiKey: string,
@@ -68,7 +100,7 @@ export async function fetchEthereumWalletTxs(
   const key = etherscanApiKey.trim();
   if (!key) {
     throw new Error(
-      "Etherscan API key required. Get a free key at https://etherscan.io/apikey",
+      "Server ETHERSCAN_API_KEY is not configured. Set it in the server env.",
     );
   }
 
@@ -89,6 +121,18 @@ export async function fetchEthereumWalletTxs(
     key,
   )) as { status: string; message: string; result: EtherscanTx[] | string };
 
+  const ethDates: string[] = [];
+  if (Array.isArray(native.result)) {
+    for (const row of native.result) {
+      if (row.isError === "1") continue;
+      ethDates.push(
+        new Date(Number(row.timeStamp) * 1000).toISOString().slice(0, 10),
+      );
+    }
+  }
+
+  const ethSeries = await loadSeriesForCoin("ethereum", ethDates);
+
   if (Array.isArray(native.result)) {
     for (const row of native.result) {
       if (row.isError === "1") continue;
@@ -99,7 +143,7 @@ export async function fetchEthereumWalletTxs(
       const date = new Date(Number(row.timeStamp) * 1000)
         .toISOString()
         .slice(0, 10);
-      const { jpy, source } = await resolveWalletUnitPrice("ETH", date);
+      const { jpy, source } = priceFromSeries(ethSeries, date);
       const from = row.from.toLowerCase();
       const to = row.to.toLowerCase();
       const side = to === addr ? "buy" : from === addr ? "sell" : null;
@@ -114,11 +158,11 @@ export async function fetchEthereumWalletTxs(
         unitPriceJpy: jpy,
         priceSource: source,
         source: "wallet",
+        walletAddress: address,
         note: `ETH · ${row.hash.slice(0, 10)}…`,
         txHash: row.hash,
       });
 
-      // Gas fee as separate fee disposal when we send
       if (from === addr && row.gasUsed && row.gasPrice) {
         const gasEth =
           (Number(BigInt(row.gasUsed)) * Number(BigInt(row.gasPrice))) / 1e18;
@@ -133,6 +177,7 @@ export async function fetchEthereumWalletTxs(
             unitPriceJpy: jpy,
             priceSource: source,
             source: "wallet",
+            walletAddress: address,
             note: `gas · ${row.hash.slice(0, 10)}…`,
             txHash: row.hash,
           });
@@ -165,6 +210,16 @@ export async function fetchEthereumWalletTxs(
   };
 
   if (Array.isArray(tokens.result)) {
+    type TokenRow = {
+      row: EtherscanTokenTx;
+      contract: string;
+      symbol: string;
+      qty: number;
+      date: string;
+      side: "buy" | "sell";
+      coinId: string | null;
+    };
+    const tokenRows: TokenRow[] = [];
     for (const row of tokens.result) {
       const contract = row.contractAddress.toLowerCase();
       const meta = ERC20_SYMBOLS[contract];
@@ -181,36 +236,40 @@ export async function fetchEthereumWalletTxs(
       const to = row.to.toLowerCase();
       const side = to === addr ? "buy" : from === addr ? "sell" : null;
       if (!side) continue;
+      const coinId = meta?.coinId ?? coinIdForAsset(symbol);
+      tokenRows.push({ row, contract, symbol, qty, date, side, coinId });
+    }
 
-      let jpyValue = 0;
-      let unitPriceJpy: number | undefined;
-      let priceSource: CryptoTx["priceSource"] = "unknown";
-      try {
-        const priced = await resolveWalletUnitPrice(symbol, date, {
-          coinId: meta?.coinId,
-          tokenContract: contract,
-        });
-        unitPriceJpy = priced.jpy;
-        priceSource = priced.source;
-        jpyValue = Math.round(qty * priced.jpy);
-      } catch {
-        // Keep tx with 0 JPY — user/accountant can fix in review
-        priceSource = "unknown";
-      }
+    const byCoin = new Map<string, string[]>();
+    for (const r of tokenRows) {
+      if (!r.coinId) continue;
+      const list = byCoin.get(r.coinId) ?? [];
+      list.push(r.date);
+      byCoin.set(r.coinId, list);
+    }
 
+    const seriesByCoin = new Map<string, Series | null>();
+    for (const [coinId, dates] of byCoin) {
+      seriesByCoin.set(coinId, await loadSeriesForCoin(coinId, dates));
+    }
+
+    for (const r of tokenRows) {
+      const series = r.coinId ? seriesByCoin.get(r.coinId) ?? null : null;
+      const { jpy, source } = priceFromSeries(series, r.date);
       txs.push({
         id: uid("erc"),
-        date,
-        asset: symbol,
-        side,
-        quantity: qty,
-        jpyValue,
-        unitPriceJpy,
-        priceSource,
+        date: r.date,
+        asset: r.symbol,
+        side: r.side,
+        quantity: r.qty,
+        jpyValue: Math.round(r.qty * jpy),
+        unitPriceJpy: jpy || undefined,
+        priceSource: source,
         source: "wallet",
-        note: `ERC-20 ${symbol} · ${row.hash.slice(0, 10)}…`,
-        txHash: row.hash,
-        tokenContract: contract,
+        walletAddress: address,
+        note: `ERC-20 ${r.symbol} · ${r.row.hash.slice(0, 10)}…`,
+        txHash: r.row.hash,
+        tokenContract: r.contract,
       });
     }
   }
@@ -232,6 +291,10 @@ export async function fetchBitcoinWalletTxs(
   if (!res.ok) throw new Error(`Bitcoin explorer HTTP ${res.status}`);
   const data = (await res.json()) as { txs?: BtcTx[] };
   const txs: CryptoTx[] = [];
+  const dates = (data.txs ?? []).map((row) =>
+    new Date(row.time * 1000).toISOString().slice(0, 10),
+  );
+  const btcSeries = await loadSeriesForCoin("bitcoin", dates);
 
   for (const row of data.txs ?? []) {
     const sats = Number(row.result);
@@ -239,7 +302,7 @@ export async function fetchBitcoinWalletTxs(
     const qty = Math.abs(sats) / 1e8;
     if (qty < 1e-8) continue;
     const date = new Date(row.time * 1000).toISOString().slice(0, 10);
-    const { jpy, source } = await resolveWalletUnitPrice("BTC", date);
+    const { jpy, source } = priceFromSeries(btcSeries, date);
     txs.push({
       id: uid("btc"),
       date,
@@ -250,6 +313,7 @@ export async function fetchBitcoinWalletTxs(
       unitPriceJpy: jpy,
       priceSource: source,
       source: "wallet",
+      walletAddress: address,
       note: `Bitcoin · ${row.hash.slice(0, 10)}…`,
       txHash: row.hash,
     });
@@ -260,7 +324,6 @@ export async function fetchBitcoinWalletTxs(
 
 export async function fetchLiveWalletTxs(options: {
   address: string;
-  etherscanApiKey?: string;
 }): Promise<{ address: string; chain: string; txs: CryptoTx[] }> {
   const address = options.address.trim();
   const chain = detectChain(address);
@@ -269,8 +332,7 @@ export async function fetchLiveWalletTxs(options: {
   }
 
   if (chain === "ethereum") {
-    const key =
-      options.etherscanApiKey?.trim() || process.env.ETHERSCAN_API_KEY || "";
+    const key = process.env.ETHERSCAN_API_KEY || "";
     const txs = await fetchEthereumWalletTxs(address, key);
     return { address, chain, txs: collapseWraps(txs) };
   }

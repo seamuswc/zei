@@ -65,7 +65,8 @@ const micro = (BigInt("0x" + paymentId.slice(0, 8)) % 999999n) + 1n;
 const amountRaw = base + micro;
 const amountUsdc = `${amountRaw / 1000000n}.${(amountRaw % 1000000n).toString().padStart(6, "0")}`;
 const ref = `ZEI:smoke:${paymentId.slice(0, 8)}`;
-const qr = await QRCode.toDataURL(address, { width: 120, margin: 1 });
+const eip681 = `ethereum:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913@8453/transfer?address=${address}&uint256=${amountRaw}`;
+const qr = await QRCode.toDataURL(eip681, { width: 120, margin: 1 });
 
 console.log("amount", amountUsdc, "raw", amountRaw.toString());
 console.log("ref", ref);

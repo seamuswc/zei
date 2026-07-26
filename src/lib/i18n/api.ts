@@ -12,7 +12,7 @@ export const apiMessages = {
     resend_failed: "再送に失敗しました。",
     reset_failed: "再設定に失敗しました。",
     account_created:
-      "アカウントを作成しました。ログイン前にメールを確認してください。ローカル開発では data/mail/ または verifyLinkDev を確認。",
+      "アカウントを作成しました。確認メールを送信済みです。受信箱（と迷惑メール）のリンクを開いてからログインしてください。届かない場合は「確認メールを再送」を使ってください。",
     reset_sent: "そのメールが登録済みなら、リセットリンクを送信しました。",
     verify_sent: "確認メールを送信しました。",
     verify_sent_if: "確認が必要なアカウントなら、リンクを送信しました。",
@@ -20,7 +20,7 @@ export const apiMessages = {
     login_required: "ログインが必要です。",
     verify_before_save: "保存前にメール確認が必要です。",
     pro_required:
-      "クラウド保存にはProプランが必要です。USDCで決済して解除してください。",
+      "申告年度の合計・出力にはProプランが必要です。USDCで決済して解除してください。",
     payment_failed: "決済に失敗しました。",
     wallet_address_required: "ウォレットアドレスが必要です。",
     exchange_creds_required: "取引所・APIキー・シークレットが必要です。",
@@ -40,7 +40,7 @@ export const apiMessages = {
     resend_failed: "Resend failed.",
     reset_failed: "Reset failed.",
     account_created:
-      "Account created. Verify your email before logging in. In local dev, check data/mail/ or the verifyLinkDev field.",
+      "Account created. A verification email was sent — open your inbox (and spam), click the link, then log in. If nothing arrives, use “Resend verify email”.",
     reset_sent: "If that email exists, a reset link was sent.",
     verify_sent: "Verification email sent.",
     verify_sent_if: "If that account needs verification, a link was sent.",
@@ -48,7 +48,7 @@ export const apiMessages = {
     login_required: "Login required.",
     verify_before_save: "Verify your email before saving.",
     pro_required:
-      "Pro plan required to save cloud ledger. Pay with USDC to unlock.",
+      "Pro plan required for filing-year totals and export. Pay with USDC to unlock.",
     payment_failed: "Payment failed.",
     wallet_address_required: "Wallet address is required.",
     exchange_creds_required: "exchange, apiKey, and apiSecret are required.",

@@ -1,61 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CryptoTx } from "@/lib/tax/types";
-import type { YearCarryRow } from "@/lib/tax/loss-carry";
-import { usePortfolio } from "./PortfolioProvider";
+import { filingTaxYear } from "@/lib/billing";
 import { useI18n } from "./I18nProvider";
-import { PayUsdcModal, type UsdcInvoiceClient } from "./PayUsdcModal";
-
-type User = {
-  id: string;
-  email: string;
-  plan: "free" | "pro";
-  planExpiresAt: string | null;
-  emailVerified: boolean;
-};
+import { useAuth } from "./AuthProvider";
 
 export function AuthMenu() {
-  const {
-    txs,
-    otherIncomeJpy,
-    incomeProvided,
-    year,
-    hydrateFromServer,
-    setTaxYears,
-  } = usePortfolio();
+  const { user, isPro, refreshMe, startProPay, setUser } = useAuth();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [devLink, setDevLink] = useState<string | null>(null);
-  const [invoice, setInvoice] = useState<UsdcInvoiceClient | null>(null);
-
-  async function refreshMe() {
-    const res = await fetch("/api/auth/me");
-    const data = (await res.json()) as {
-      user: User | null;
-      ledger?: {
-        txs: CryptoTx[];
-        otherIncomeJpy: number;
-        incomeProvided: boolean;
-        year: number;
-      };
-      taxYears?: YearCarryRow[];
-    };
-    setUser(data.user);
-    if (data.user?.plan === "pro" && data.ledger) {
-      hydrateFromServer(data.ledger);
-    }
-    if (data.taxYears) setTaxYears(data.taxYears);
-  }
 
   useEffect(() => {
-    void refreshMe();
     const q = new URLSearchParams(window.location.search);
     if (q.get("verify") === "ok") setMsg(t("auth_verify_ok"));
     if (q.get("verify") === "bad") setMsg(t("auth_verify_bad"));
@@ -96,7 +57,7 @@ export function AuthMenu() {
       setPassword("");
       if (data.verifyLinkDev) setDevLink(data.verifyLinkDev);
       if (mode === "register" || data.needsVerify) {
-        setMsg(data.message || t("auth_created"));
+        setMsg(t("auth_created"));
         setMode("login");
       } else {
         await refreshMe();
@@ -140,48 +101,11 @@ export function AuthMenu() {
     setOpen(false);
   }
 
-  async function save() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      const res = await fetch("/api/ledger", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          txs,
-          otherIncomeJpy,
-          incomeProvided,
-          year,
-        }),
-      });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error || "Save failed");
-      setMsg(t("auth_saved"));
-      await refreshMe();
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function pay() {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/pay/create", { method: "POST" });
-      const data = (await res.json()) as UsdcInvoiceClient & { error?: string };
-      if (!res.ok) throw new Error(data.error || "Payment failed");
-      setInvoice({
-        paymentId: data.paymentId,
-        address: data.address,
-        amountUsdc: data.amountUsdc,
-        ref: data.ref,
-        qrDataUrl: data.qrDataUrl,
-        eip681: data.eip681,
-        chains: data.chains,
-        allowDevConfirm: data.allowDevConfirm,
-      });
+      await startProPay();
       setOpen(false);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Payment failed");
@@ -190,18 +114,10 @@ export function AuthMenu() {
     }
   }
 
+  const filingYear = filingTaxYear();
+
   return (
     <div className="auth-menu">
-      {invoice && (
-        <PayUsdcModal
-          invoice={invoice}
-          onClose={() => setInvoice(null)}
-          onPaid={() => {
-            void refreshMe();
-            setTimeout(() => setInvoice(null), 1800);
-          }}
-        />
-      )}
       <button
         type="button"
         className="btn btn--solid btn--sm"
@@ -213,6 +129,7 @@ export function AuthMenu() {
         <div className="auth-panel">
           {!user ? (
             <>
+              <p className="auth-pricing">{t("auth_pricing", { year: filingYear })}</p>
               <div className="preset-row">
                 <button
                   type="button"
@@ -257,6 +174,11 @@ export function AuthMenu() {
                     }
                   />
                 </label>
+              )}
+              {mode === "register" && (
+                <p className="field-hint auth-register-hint">
+                  {t("auth_register_hint")}
+                </p>
               )}
               <button
                 type="button"
@@ -309,27 +231,31 @@ export function AuthMenu() {
                 <strong>{user.email}</strong>
                 <br />
                 {user.emailVerified ? t("auth_verified") : t("auth_unverified")} ·{" "}
-                {user.plan}
+                {isPro
+                  ? t("auth_plan_pro")
+                  : t("auth_plan_free", { year: filingYear })}
               </p>
+              {!isPro && (
+                <p className="auth-pricing">{t("auth_pricing", { year: filingYear })}</p>
+              )}
               <div className="import-actions">
-                {user.plan !== "pro" && (
+                {!isPro && (
                   <button
                     type="button"
                     className="btn btn--solid btn--sm"
                     disabled={busy}
                     onClick={() => void pay()}
                   >
-                    {t("auth_pay")}
+                    {busy ? (
+                      <span className="btn-loading">
+                        <span className="spinner" aria-hidden />
+                        {t("auth_creating")}
+                      </span>
+                    ) : (
+                      t("auth_pay")
+                    )}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn btn--solid btn--sm"
-                  disabled={busy || user.plan !== "pro"}
-                  onClick={() => void save()}
-                >
-                  {t("auth_save")}
-                </button>
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
@@ -338,6 +264,9 @@ export function AuthMenu() {
                   {t("auth_logout")}
                 </button>
               </div>
+              {user.emailVerified && (
+                <p className="field-hint">{t("auth_autosave_hint")}</p>
+              )}
             </>
           )}
           {msg && (

@@ -17,6 +17,7 @@ import {
 import { matchTransfers } from "@/lib/tax/transfers";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 import { applyLossCarrySeries } from "@/lib/tax/loss-carry";
+import { filingTaxYear } from "@/lib/billing";
 
 interface PortfolioState {
   txs: CryptoTx[];
@@ -25,13 +26,18 @@ interface PortfolioState {
   incomeProvided: boolean;
   taxYears: YearCarryRow[];
   connectedWallet?: string;
+  linkedWallets: string[];
   linkedExchanges: string[];
+  availableYears: number[];
   addTxs: (incoming: CryptoTx[]) => void;
   clearTxs: () => void;
   setYear: (y: number) => void;
   setOtherIncomeJpy: (n: number) => void;
   setConnectedWallet: (a?: string) => void;
+  markWalletLinked: (address: string) => void;
+  unlinkWallet: (address: string) => void;
   markExchangeLinked: (id: string) => void;
+  unlinkExchange: (id: string) => void;
   updateTx: (id: string, patch: Partial<CryptoTx>) => void;
   removeTx: (id: string) => void;
   toggleExclude: (id: string) => void;
@@ -69,12 +75,24 @@ function recomputeLocalYears(txs: CryptoTx[]): YearCarryRow[] {
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [txs, setTxs] = useState<CryptoTx[]>([]);
-  const [year, setYear] = useState(2025);
+  // Prefer a non-filing year so free users land on an unlocked year.
+  const [year, setYear] = useState(() => filingTaxYear() - 1);
   const [otherIncomeJpy, setOtherIncomeJpyState] = useState(0);
   const [incomeProvided, setIncomeProvided] = useState(false);
   const [taxYears, setTaxYears] = useState<YearCarryRow[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<string>();
+  const [linkedWallets, setLinkedWallets] = useState<string[]>([]);
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>([2024, 2025, 2026]);
+    for (const t of txs) {
+      const y = Number(t.date.slice(0, 4));
+      if (Number.isFinite(y)) years.add(y);
+    }
+    years.add(year);
+    return [...years].sort((a, b) => b - a);
+  }, [txs, year]);
 
   const commitTxs = useCallback((next: CryptoTx[]) => {
     const collapsed = collapseWraps(matchTransfers(next).txs);
@@ -102,6 +120,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setTxs([]);
     setTaxYears([]);
     setConnectedWallet(undefined);
+    setLinkedWallets([]);
     setLinkedExchanges([]);
   }, []);
 
@@ -110,10 +129,32 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setIncomeProvided(true);
   }, []);
 
+  const markWalletLinked = useCallback((address: string) => {
+    const a = address.trim();
+    if (!a) return;
+    setLinkedWallets((prev) => (prev.includes(a) ? prev : [...prev, a]));
+    setConnectedWallet(a);
+  }, []);
+
+  /** Clear link badge only — ledger / tax calc stays untouched. */
+  const unlinkWallet = useCallback((address: string) => {
+    const target = address.trim().toLowerCase();
+    setLinkedWallets((prev) => {
+      const next = prev.filter((a) => a.toLowerCase() !== target);
+      setConnectedWallet(next[next.length - 1]);
+      return next;
+    });
+  }, []);
+
   const markExchangeLinked = useCallback((id: string) => {
     setLinkedExchanges((prev) =>
       prev.includes(id) ? prev : [...prev, id],
     );
+  }, []);
+
+  /** Clear link badge only — ledger / tax calc stays untouched. */
+  const unlinkExchange = useCallback((id: string) => {
+    setLinkedExchanges((prev) => prev.filter((x) => x !== id));
   }, []);
 
   const updateTx = useCallback(
@@ -172,13 +213,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       incomeProvided,
       taxYears,
       connectedWallet,
+      linkedWallets,
       linkedExchanges,
+      availableYears,
       addTxs,
       clearTxs,
       setYear,
       setOtherIncomeJpy,
       setConnectedWallet,
+      markWalletLinked,
+      unlinkWallet,
       markExchangeLinked,
+      unlinkExchange,
       updateTx,
       removeTx,
       toggleExclude,
@@ -192,11 +238,16 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       incomeProvided,
       taxYears,
       connectedWallet,
+      linkedWallets,
       linkedExchanges,
+      availableYears,
       addTxs,
       clearTxs,
       setOtherIncomeJpy,
+      markWalletLinked,
+      unlinkWallet,
       markExchangeLinked,
+      unlinkExchange,
       updateTx,
       removeTx,
       toggleExclude,

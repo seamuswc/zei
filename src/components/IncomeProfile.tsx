@@ -1,13 +1,19 @@
 "use client";
 
 import { formatJpy } from "@/lib/tax/engine";
+import { isFilingYearLocked } from "@/lib/billing";
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
+import { useAuth } from "./AuthProvider";
 
 export function IncomeProfile() {
-  const { otherIncomeJpy, setOtherIncomeJpy, incomeProvided } = usePortfolio();
+  const { year, otherIncomeJpy, setOtherIncomeJpy, incomeProvided } =
+    usePortfolio();
   const { estimate } = useTaxSummary();
   const { t } = useI18n();
+  const { isPro } = useAuth();
+  const locked = isFilingYearLocked(year, isPro);
+  const gainLabel = locked ? t("freemium_cell_locked") : formatJpy(estimate.taxableGainJpy);
 
   return (
     <section className="income" id="income">
@@ -37,12 +43,13 @@ export function IncomeProfile() {
           />
         </label>
         <p className="status-warn">
-          {t("income_warn", { gain: formatJpy(estimate.taxableGainJpy) })}
-          {incomeProvided && otherIncomeJpy > 0
-            ? t("income_sketch", {
-                tax: formatJpy(estimate.cryptoIncrementalTaxJpy),
-              })
-            : ""}
+          {t("income_warn", { gain: gainLabel })}
+          {!locked &&
+            incomeProvided &&
+            otherIncomeJpy > 0 &&
+            t("income_sketch", {
+              tax: formatJpy(estimate.cryptoIncrementalTaxJpy),
+            })}
         </p>
       </div>
     </section>

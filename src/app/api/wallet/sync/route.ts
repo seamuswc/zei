@@ -8,17 +8,14 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as {
       address?: string;
-      etherscanApiKey?: string;
     };
     const address = body.address?.trim();
     if (!address) {
       return apiJsonError(req, "wallet_address_required", 400);
     }
 
-    const result = await fetchLiveWalletTxs({
-      address,
-      etherscanApiKey: body.etherscanApiKey,
-    });
+    // Always use server ETHERSCAN_API_KEY — never ask the client for one
+    const result = await fetchLiveWalletTxs({ address });
 
     return NextResponse.json({
       address: result.address,

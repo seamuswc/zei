@@ -1,5 +1,13 @@
 import { createHmac } from "crypto";
 import type { CryptoTx } from "@/lib/tax/types";
+import {
+  fetchBinanceGlobalTrades,
+  fetchBybitTrades,
+  fetchOkxTrades,
+  fetchKrakenTrades,
+  fetchKucoinTrades,
+  fetchBinanceJpTradesShared,
+} from "@/lib/import/exchange-overseas";
 
 function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -442,98 +450,8 @@ export async function fetchBitbankTrades(
   return txs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/**
- * Binance Japan spot trades — same signing as Binance global.
- * Requires API key with read / spot trade history only (no withdraw).
- */
-export async function fetchBinanceJpTrades(
-  apiKey: string,
-  apiSecret: string,
-  symbols: string[] = [
-    "BTCJPY",
-    "ETHJPY",
-    "XRPJPY",
-    "SOLJPY",
-    "BNBJPY",
-    "ADAJPY",
-    "DOGEJPY",
-    "DOTJPY",
-    "MATICJPY",
-    "AVAXJPY",
-  ],
-): Promise<CryptoTx[]> {
-  const txs: CryptoTx[] = [];
-  const base = process.env.BINANCE_API_BASE || "https://api.binance.com";
-  let authFailed: string | null = null;
-
-  for (const symbol of symbols) {
-    const timestamp = Date.now();
-    const qs = `symbol=${symbol}&limit=1000&timestamp=${timestamp}`;
-    const sig = createHmac("sha256", apiSecret).update(qs).digest("hex");
-    const url = `${base}/api/v3/myTrades?${qs}&signature=${sig}`;
-
-    const res = await fetch(url, {
-      headers: { "X-MBX-APIKEY": apiKey },
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      if (res.status === 401 || res.status === 403) {
-        authFailed = `Binance JP auth error: ${body.slice(0, 200)}`;
-        break;
-      }
-      continue;
-    }
-
-    const rows = (await res.json()) as Array<{
-      id: number;
-      symbol: string;
-      qty: string;
-      quoteQty: string;
-      price: string;
-      commission: string;
-      commissionAsset: string;
-      time: number;
-      isBuyer: boolean;
-    }>;
-
-    if (!Array.isArray(rows)) continue;
-    const asset = symbol.replace("JPY", "");
-    for (const row of rows) {
-      const qty = Number(row.qty);
-      const jpy = Math.round(Number(row.quoteQty));
-      if (!qty || !jpy) continue;
-      txs.push({
-        id: uid("bn"),
-        date: toDate(row.time),
-        asset,
-        side: row.isBuyer ? "buy" : "sell",
-        quantity: qty,
-        jpyValue: jpy,
-        feeJpy:
-          row.commissionAsset === "JPY"
-            ? Math.round(Number(row.commission))
-            : undefined,
-        unitPriceJpy: Number(row.price),
-        priceSource: "exchange_fill",
-        source: "exchange",
-        exchange: "Binance Japan",
-        note: `${row.symbol} #${row.id}`,
-      });
-    }
-    await sleep(120);
-  }
-
-  if (authFailed) throw new Error(authFailed);
-  if (txs.length === 0) {
-    throw new Error(
-      "Binance returned no JPY trades. Use a read-only key with spot history, or Binance Japan CSV.",
-    );
-  }
-
-  return txs.sort((a, b) => a.date.localeCompare(b.date));
-}
+/** Binance Japan spot myTrades (JPY pairs) — shared overseas helper. */
+export { fetchBinanceJpTradesShared as fetchBinanceJpTrades } from "@/lib/import/exchange-overseas";
 
 /** Zaif trade history (HMAC-SHA512). */
 export async function fetchZaifTrades(
@@ -652,16 +570,24 @@ export type ExchangePermKey =
   | "exchange_perm_gmo"
   | "exchange_perm_bitbank"
   | "exchange_perm_binance"
-  | "exchange_perm_zaif";
+  | "exchange_perm_zaif"
+  | "exchange_perm_binance_global"
+  | "exchange_perm_bybit"
+  | "exchange_perm_okx"
+  | "exchange_perm_kraken"
+  | "exchange_perm_kucoin";
+
+export type ExchangeRegion = "Japan" | "Overseas";
 
 export interface ExchangeDef {
   id: string;
   name: string;
-  region: string;
+  region: ExchangeRegion;
   live: boolean;
   permKey: ExchangePermKey;
   docsUrl: string;
-  historyNoteKey?: "exchange_hist_gmo";
+  historyNoteKey?: "exchange_hist_gmo" | "exchange_hist_overseas";
+  needsPassphrase?: boolean;
 }
 
 export const EXCHANGES: ExchangeDef[] = [
@@ -714,12 +640,60 @@ export const EXCHANGES: ExchangeDef[] = [
     permKey: "exchange_perm_zaif",
     docsUrl: "https://zaif-api-document.readthedocs.io/",
   },
+  {
+    id: "binance",
+    name: "Binance",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_binance_global",
+    docsUrl: "https://www.binance.com/en/support/faq/how-to-create-api",
+    historyNoteKey: "exchange_hist_overseas",
+  },
+  {
+    id: "bybit",
+    name: "Bybit",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_bybit",
+    docsUrl: "https://www.bybit.com/en/help-center/article/How-to-create-your-API-key",
+    historyNoteKey: "exchange_hist_overseas",
+  },
+  {
+    id: "okx",
+    name: "OKX",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_okx",
+    docsUrl: "https://www.okx.com/help/how-do-i-create-an-api-key",
+    historyNoteKey: "exchange_hist_overseas",
+    needsPassphrase: true,
+  },
+  {
+    id: "kraken",
+    name: "Kraken",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_kraken",
+    docsUrl: "https://support.kraken.com/hc/en-us/articles/360000919966",
+    historyNoteKey: "exchange_hist_overseas",
+  },
+  {
+    id: "kucoin",
+    name: "KuCoin",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_kucoin",
+    docsUrl: "https://www.kucoin.com/support/360015102174",
+    historyNoteKey: "exchange_hist_overseas",
+    needsPassphrase: true,
+  },
 ];
 
 export async function fetchExchangeLive(
   exchange: string,
   apiKey: string,
   apiSecret: string,
+  passphrase?: string,
 ): Promise<{ txs: CryptoTx[]; warning?: string }> {
   let warning: string | undefined;
 
@@ -736,9 +710,23 @@ export async function fetchExchangeLive(
     case "bitbank":
       return { txs: await fetchBitbankTrades(apiKey, apiSecret) };
     case "binance-jp":
-      return { txs: await fetchBinanceJpTrades(apiKey, apiSecret) };
+      return { txs: await fetchBinanceJpTradesShared(apiKey, apiSecret) };
     case "zaif":
       return { txs: await fetchZaifTrades(apiKey, apiSecret) };
+    case "binance":
+      return { txs: await fetchBinanceGlobalTrades(apiKey, apiSecret) };
+    case "bybit":
+      return { txs: await fetchBybitTrades(apiKey, apiSecret) };
+    case "okx":
+      return {
+        txs: await fetchOkxTrades(apiKey, apiSecret, passphrase || ""),
+      };
+    case "kraken":
+      return { txs: await fetchKrakenTrades(apiKey, apiSecret) };
+    case "kucoin":
+      return {
+        txs: await fetchKucoinTrades(apiKey, apiSecret, passphrase || ""),
+      };
     default:
       throw new Error("Unsupported exchange for live sync.");
   }

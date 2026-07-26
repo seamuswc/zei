@@ -5,16 +5,34 @@ import type { CryptoTx } from "@/lib/tax/types";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
+async function readJsonSafe(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    if (/<html/i.test(text)) {
+      throw new Error(
+        res.status === 504 || res.status === 502
+          ? "Wallet sync timed out. Wait a moment and try again."
+          : "Wallet sync failed (server returned an error page).",
+      );
+    }
+    throw new Error(text.slice(0, 160) || `Wallet sync failed (${res.status})`);
+  }
+}
+
 export function WalletConnect() {
-  const { addTxs, connectedWallet, setConnectedWallet } = usePortfolio();
+  const { addTxs, markWalletLinked } = usePortfolio();
   const { t } = useI18n();
   const [address, setAddress] = useState("");
-  const [etherscanKey, setEtherscanKey] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onConnect() {
+    if (busy) return;
+    const addr = address.trim();
+    if (!addr) return;
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -22,24 +40,26 @@ export function WalletConnect() {
       const res = await fetch("/api/wallet/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: address.trim(),
-          etherscanApiKey: etherscanKey.trim() || undefined,
-        }),
+        body: JSON.stringify({ address: addr }),
       });
-      const data = (await res.json()) as {
-        error?: string;
-        address?: string;
-        chain?: string;
-        count?: number;
-        txs?: CryptoTx[];
-      };
-      if (!res.ok) throw new Error(data.error || "Wallet sync failed");
-      addTxs(data.txs ?? []);
-      setConnectedWallet(data.address);
+      const data = await readJsonSafe(res);
+      if (!res.ok) {
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Wallet sync failed",
+        );
+      }
+      const txs = (data.txs as CryptoTx[] | undefined) ?? [];
+      const syncedAddress =
+        typeof data.address === "string" ? data.address : addr;
+      addTxs(txs);
+      markWalletLinked(syncedAddress);
       setStatus(
-        `Live · ${data.chain} · ${data.count ?? 0}`,
+        t("wallet_sync_ok", {
+          chain: String(data.chain ?? ""),
+          n: Number(data.count ?? txs.length),
+        }),
       );
+      setAddress("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Wallet sync failed");
     } finally {
@@ -47,10 +67,8 @@ export function WalletConnect() {
     }
   }
 
-  const needsEthKey = address.trim().startsWith("0x");
-
   return (
-    <div className="import-panel">
+    <div className={`import-panel${busy ? " import-panel--busy" : ""}`}>
       <div className="import-panel__head">
         <p className="import-kicker">{t("wallet_kicker")}</p>
         <h3>{t("wallet_title")}</h3>
@@ -65,21 +83,9 @@ export function WalletConnect() {
           placeholder="0x… or bc1…"
           spellCheck={false}
           autoComplete="off"
+          disabled={busy}
         />
       </label>
-
-      {needsEthKey && (
-        <label className="field">
-          <span>{t("wallet_etherscan")}</span>
-          <input
-            value={etherscanKey}
-            onChange={(e) => setEtherscanKey(e.target.value)}
-            placeholder={t("wallet_etherscan_ph")}
-            spellCheck={false}
-            autoComplete="off"
-          />
-        </label>
-      )}
 
       <div className="import-actions">
         <button
@@ -88,18 +94,25 @@ export function WalletConnect() {
           disabled={busy || !address.trim()}
           onClick={() => void onConnect()}
         >
-          {busy ? t("wallet_syncing") : t("wallet_sync")}
+          {busy ? (
+            <span className="btn-loading">
+              <span className="spinner" aria-hidden />
+              {t("wallet_syncing")}
+            </span>
+          ) : (
+            t("wallet_sync")
+          )}
         </button>
       </div>
 
-      {needsEthKey && !etherscanKey.trim() && (
-        <p className="field-hint">{t("wallet_hint")}</p>
-      )}
-      {connectedWallet && (
-        <p className="status-meta">
-          {t("wallet_linked", { address: connectedWallet })}
+      {busy && (
+        <p className="wallet-sync-banner" role="status" aria-live="polite">
+          <span className="spinner" aria-hidden />
+          {t("wallet_sync_wait")}
         </p>
       )}
+
+      <p className="field-hint">{t("wallet_hint")}</p>
       {status && <p className="status-ok">{status}</p>}
       {error && <p className="status-err-line">{error}</p>}
     </div>

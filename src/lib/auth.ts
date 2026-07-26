@@ -2,7 +2,12 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
-import { appBaseUrl, sendEmail } from "@/lib/mail";
+import {
+  appBaseUrl,
+  resetEmailContent,
+  sendEmail,
+  verifyEmailContent,
+} from "@/lib/mail";
 
 const COOKIE = "zei_session";
 const secret = () =>
@@ -63,11 +68,12 @@ export function createEmailToken(
 export async function sendVerifyEmail(userId: string, email: string) {
   const token = createEmailToken(userId, "verify", 48);
   const link = `${appBaseUrl()}/api/auth/verify?token=${token}`;
+  const mail = verifyEmailContent(link);
   await sendEmail({
     to: email,
-    subject: "Verify your ZEI account",
-    text: `Welcome to ZEI.\n\nVerify your email:\n${link}\n\nThis link expires in 48 hours.`,
-    html: `<p>Welcome to ZEI.</p><p><a href="${link}">Verify your email</a></p><p>This link expires in 48 hours.</p>`,
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html,
   });
   return link;
 }
@@ -82,11 +88,12 @@ export async function sendResetEmail(emailRaw: string) {
   if (!row) return;
   const token = createEmailToken(row.id, "reset", 2);
   const link = `${appBaseUrl()}/reset?token=${token}`;
+  const mail = resetEmailContent(link);
   await sendEmail({
     to: row.email,
-    subject: "Reset your ZEI password",
-    text: `Reset your password:\n${link}\n\nExpires in 2 hours. Ignore if you did not request this.`,
-    html: `<p><a href="${link}">Reset your password</a></p><p>Expires in 2 hours.</p>`,
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html,
   });
 }
 

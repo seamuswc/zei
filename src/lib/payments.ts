@@ -142,9 +142,8 @@ export async function createUsdcInvoice(options: {
     USDC_CHAINS.find((c) => c.id === 8453) ?? USDC_CHAINS[0];
   const eip681 = eip681Transfer(qrChain, address, amountRaw);
 
-  // Plain address QR — most wallets scan this reliably.
-  // EIP-681 is offered separately for wallets that support token payment URIs.
-  const qrDataUrl = await QRCode.toDataURL(address, {
+  // EIP-681 URI so wallets that support it prefill token, chain, destination, amount.
+  const qrDataUrl = await QRCode.toDataURL(eip681, {
     margin: 1,
     width: 240,
     errorCorrectionLevel: "M",

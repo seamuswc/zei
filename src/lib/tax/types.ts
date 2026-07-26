@@ -31,6 +31,8 @@ export interface CryptoTx {
   feeJpy?: number;
   source: TxSource;
   exchange?: string;
+  /** Wallet address when imported via live wallet sync. */
+  walletAddress?: string;
   note?: string;
   txHash?: string;
   /** How JPY was determined (audit trail). */

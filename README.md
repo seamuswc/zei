@@ -10,7 +10,7 @@ It is **not** a full 確定申告. Language defaults to **日本語** (English t
 ```text
 Import trades  →  Review / edit ledger  →  Tax year result  →  Accountant ZIP
      ↑ monochrome CSV / wallet / exchange API
-Accounts (email verify) unlock cloud save after Pro (USDC)
+Accounts (email verify) autosave the ledger to the cloud; Pro (USDC) unlocks the filing year
 ```
 
 ### 1. Bring data in
@@ -19,9 +19,9 @@ Accounts (email verify) unlock cloud save after Pro (USDC)
 |--------|----------------|
 | **CSV / Excel export** | Upload exchange or manual books |
 | **Wallet** | Live ETH (+ ERC-20) via Etherscan, or BTC — priced to JPY |
-| **Exchange API** | Read-only keys for bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif |
+| **Exchange API** | Read-only keys — **Japan:** bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif · **Overseas:** Binance, Bybit, OKX, Kraken, KuCoin |
 
-**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync).
+**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin also need the API **passphrase**. Overseas USDT/USD fills are converted to JPY (CoinGecko).
 
 ### 2. Pricing (waterfall)
 
@@ -80,7 +80,7 @@ Same EOA on every chain. No NOWPayments.
 - [ ] `REQUIRE_EMAIL_VERIFY=1` in production  
 - [ ] Deploy (Node + writable `data/` for SQLite)  
 - [ ] Smoke-test: register → verify email → pay USDC → save ledger → export ZIP  
-- [ ] Confirm exchange read-only sync for at least one JP venue  
+- [ ] Confirm exchange read-only sync for at least one JP and one overseas venue  
 
 ---
 

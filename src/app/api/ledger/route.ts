@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, isPro } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { saveLedger } from "@/lib/ledger-store";
 import type { CryptoTx } from "@/lib/tax/types";
 import { apiJsonError } from "@/lib/i18n/api";
@@ -13,9 +13,6 @@ export async function PUT(req: Request) {
   }
   if (!user.emailVerified) {
     return apiJsonError(req, "verify_before_save", 403);
-  }
-  if (!isPro(user)) {
-    return apiJsonError(req, "pro_required", 402);
   }
 
   const body = (await req.json()) as {
