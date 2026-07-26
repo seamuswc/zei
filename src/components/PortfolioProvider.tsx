@@ -27,6 +27,8 @@ interface PortfolioState {
   taxYears: YearCarryRow[];
   connectedWallet?: string;
   linkedWallets: string[];
+  /** Lowercase 0x address → ENS label when the user connected via ENS. */
+  walletEnsLabels: Record<string, string>;
   linkedExchanges: string[];
   availableYears: number[];
   addTxs: (incoming: CryptoTx[]) => void;
@@ -34,7 +36,7 @@ interface PortfolioState {
   setYear: (y: number) => void;
   setOtherIncomeJpy: (n: number) => void;
   setConnectedWallet: (a?: string) => void;
-  markWalletLinked: (address: string) => void;
+  markWalletLinked: (address: string, ens?: string) => void;
   unlinkWallet: (address: string) => void;
   markExchangeLinked: (id: string) => void;
   unlinkExchange: (id: string) => void;
@@ -82,6 +84,9 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [taxYears, setTaxYears] = useState<YearCarryRow[]>([]);
   const [connectedWallet, setConnectedWallet] = useState<string>();
   const [linkedWallets, setLinkedWallets] = useState<string[]>([]);
+  const [walletEnsLabels, setWalletEnsLabels] = useState<
+    Record<string, string>
+  >({});
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
 
   const availableYears = useMemo(() => {
@@ -121,6 +126,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setTaxYears([]);
     setConnectedWallet(undefined);
     setLinkedWallets([]);
+    setWalletEnsLabels({});
     setLinkedExchanges([]);
   }, []);
 
@@ -129,11 +135,15 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setIncomeProvided(true);
   }, []);
 
-  const markWalletLinked = useCallback((address: string) => {
-    const a = address.trim();
+  const markWalletLinked = useCallback((address: string, ens?: string) => {
+    const a = address.trim().toLowerCase();
     if (!a) return;
     setLinkedWallets((prev) => (prev.includes(a) ? prev : [...prev, a]));
     setConnectedWallet(a);
+    const label = ens?.trim().toLowerCase();
+    if (label) {
+      setWalletEnsLabels((prev) => ({ ...prev, [a]: label }));
+    }
   }, []);
 
   /** Clear link badge only — ledger / tax calc stays untouched. */
@@ -142,6 +152,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setLinkedWallets((prev) => {
       const next = prev.filter((a) => a.toLowerCase() !== target);
       setConnectedWallet(next[next.length - 1]);
+      return next;
+    });
+    setWalletEnsLabels((prev) => {
+      if (!(target in prev)) return prev;
+      const next = { ...prev };
+      delete next[target];
       return next;
     });
   }, []);
@@ -214,6 +230,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       taxYears,
       connectedWallet,
       linkedWallets,
+      walletEnsLabels,
       linkedExchanges,
       availableYears,
       addTxs,
@@ -239,6 +256,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       taxYears,
       connectedWallet,
       linkedWallets,
+      walletEnsLabels,
       linkedExchanges,
       availableYears,
       addTxs,

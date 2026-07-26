@@ -23,6 +23,14 @@ export const apiMessages = {
       "申告年度の合計・出力にはProプランが必要です。USDCで決済して解除してください。",
     payment_failed: "決済に失敗しました。",
     wallet_address_required: "ウォレットアドレスが必要です。",
+    wallet_address_invalid:
+      "有効なEthereumアドレス（0x…）またはENS名（name.eth）を入力してください。",
+    wallet_ens_invalid:
+      "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
+    wallet_ens_not_found:
+      "そのENS名は見つからないか、アドレスが設定されていません。",
+    wallet_ens_resolve_failed:
+      "ENSの解決に失敗しました。しばらくしてから再試行してください。",
     exchange_creds_required: "取引所・APIキー・シークレットが必要です。",
     invalid_link: "リンクが無効、または期限切れです。",
     password_short: "パスワードは8文字以上にしてください。",
@@ -51,6 +59,14 @@ export const apiMessages = {
       "Pro plan required for filing-year totals and export. Pay with USDC to unlock.",
     payment_failed: "Payment failed.",
     wallet_address_required: "Wallet address is required.",
+    wallet_address_invalid:
+      "Enter a valid Ethereum address (0x…) or ENS name (name.eth).",
+    wallet_ens_invalid:
+      "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
+    wallet_ens_not_found:
+      "That ENS name was not found or has no address set.",
+    wallet_ens_resolve_failed:
+      "Could not resolve ENS. Wait a moment and try again.",
     exchange_creds_required: "exchange, apiKey, and apiSecret are required.",
     invalid_link: "Invalid or expired link.",
     password_short: "Password must be 8+ characters.",

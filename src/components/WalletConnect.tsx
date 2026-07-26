@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
+import {
+  isEnsName,
+  isEthHexAddress,
+  normalizeWalletInput,
+} from "@/lib/ens-format";
+import { shortAddr } from "@/lib/browser-wallet";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
@@ -21,21 +27,43 @@ async function readJsonSafe(res: Response): Promise<Record<string, unknown>> {
   }
 }
 
+function looksLikeEnsAttempt(raw: string): boolean {
+  const n = normalizeWalletInput(raw);
+  return n.includes(".") || n.endsWith(".eth");
+}
+
 export function WalletConnect() {
-  const { addTxs, markWalletLinked, linkedWallets } = usePortfolio();
+  const {
+    addTxs,
+    markWalletLinked,
+    linkedWallets,
+    walletEnsLabels,
+    unlinkWallet,
+  } = usePortfolio();
   const { t } = useI18n();
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [resolvedLine, setResolvedLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function onConnect() {
     if (busy) return;
-    const addr = address.trim();
+    const addr = normalizeWalletInput(address);
     if (!addr) return;
+
+    // Client-side ENS shape check (server still resolves / re-validates).
+    if (looksLikeEnsAttempt(addr) && !isEnsName(addr) && !isEthHexAddress(addr)) {
+      setError(t("wallet_ens_invalid"));
+      setStatus(null);
+      setResolvedLine(null);
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setStatus(null);
+    setResolvedLine(null);
     try {
       const res = await fetch("/api/wallet/sync", {
         method: "POST",
@@ -55,8 +83,15 @@ export function WalletConnect() {
       const txs = (data.txs as CryptoTx[] | undefined) ?? [];
       const syncedAddress =
         typeof data.address === "string" ? data.address : addr;
+      const ens =
+        typeof data.ens === "string" && data.ens ? data.ens : undefined;
       addTxs(txs);
-      markWalletLinked(syncedAddress);
+      markWalletLinked(syncedAddress, ens);
+      if (ens) {
+        setResolvedLine(
+          t("wallet_resolved", { ens, address: syncedAddress }),
+        );
+      }
       setStatus(
         t("wallet_sync_ok", {
           chain: String(data.chain ?? ""),
@@ -71,6 +106,13 @@ export function WalletConnect() {
     }
   }
 
+  const busyLabel = looksLikeEnsAttempt(address)
+    ? t("wallet_resolving")
+    : t("wallet_syncing");
+  const busyBanner = looksLikeEnsAttempt(address)
+    ? t("wallet_resolving")
+    : t("wallet_sync_wait");
+
   return (
     <div className={`import-panel${busy ? " import-panel--busy" : ""}`}>
       <div className="import-panel__head">
@@ -84,7 +126,7 @@ export function WalletConnect() {
         <input
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="0x… or bc1…"
+          placeholder="0x… or vitalik.eth"
           spellCheck={false}
           autoComplete="off"
           disabled={busy}
@@ -101,7 +143,7 @@ export function WalletConnect() {
           {busy ? (
             <span className="btn-loading">
               <span className="spinner" aria-hidden />
-              {t("wallet_syncing")}
+              {busyLabel}
             </span>
           ) : (
             t("wallet_sync")
@@ -112,13 +154,41 @@ export function WalletConnect() {
       {busy && (
         <p className="wallet-sync-banner" role="status" aria-live="polite">
           <span className="spinner" aria-hidden />
-          {t("wallet_sync_wait")}
+          {busyBanner}
         </p>
       )}
 
       <p className="field-hint">{t("wallet_hint")}</p>
+      {resolvedLine && <p className="status-ok">{resolvedLine}</p>}
       {status && <p className="status-ok">{status}</p>}
       {error && <p className="status-err-line">{error}</p>}
+
+      {linkedWallets.length > 0 && (
+        <ul className="wallet-linked-list">
+          {linkedWallets.map((w) => {
+            const ens = walletEnsLabels[w.toLowerCase()];
+            const label = ens
+              ? t("wallet_linked_ens", {
+                  ens,
+                  address: shortAddr(w),
+                })
+              : t("wallet_linked", { address: shortAddr(w) });
+            return (
+              <li key={w}>
+                <span>{label}</span>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => unlinkWallet(w)}
+                  disabled={busy}
+                >
+                  {t("unlink")}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

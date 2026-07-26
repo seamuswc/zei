@@ -10,19 +10,16 @@ import {
   classifyWalletLegs,
   type WalletLeg,
 } from "@/lib/import/classify-wallet";
+import { EnsResolveError, resolveWalletAddress } from "@/lib/ens";
 
 function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 const ETH_RE = /^0x[a-fA-F0-9]{40}$/;
-const BTC_RE = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/i;
 
-export function detectChain(
-  address: string,
-): "ethereum" | "bitcoin" | null {
+export function detectChain(address: string): "ethereum" | null {
   if (ETH_RE.test(address)) return "ethereum";
-  if (BTC_RE.test(address)) return "bitcoin";
   return null;
 }
 
@@ -313,71 +310,39 @@ export async function fetchEthereumWalletTxs(
   return collapseWraps(classified).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-interface BtcTx {
-  hash: string;
-  time: number;
-  result: number;
-}
-
-export async function fetchBitcoinWalletTxs(
-  address: string,
-): Promise<CryptoTx[]> {
-  const url = `https://blockchain.info/rawaddr/${encodeURIComponent(address)}?limit=80`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Bitcoin explorer HTTP ${res.status}`);
-  const data = (await res.json()) as { txs?: BtcTx[] };
-  const txs: CryptoTx[] = [];
-  const dates = (data.txs ?? []).map((row) =>
-    new Date(row.time * 1000).toISOString().slice(0, 10),
-  );
-  const btcSeries = await loadSeriesForCoin("bitcoin", dates);
-
-  for (const row of data.txs ?? []) {
-    const sats = Number(row.result);
-    if (!sats) continue;
-    const qty = Math.abs(sats) / 1e8;
-    if (qty < 1e-8) continue;
-    const date = new Date(row.time * 1000).toISOString().slice(0, 10);
-    const { jpy, source } = priceFromSeries(btcSeries, date);
-    txs.push({
-      id: uid("btc"),
-      date,
-      asset: "BTC",
-      side: sats > 0 ? "buy" : "sell",
-      quantity: qty,
-      jpyValue: Math.round(qty * jpy),
-      unitPriceJpy: jpy,
-      priceSource: source,
-      source: "wallet",
-      walletAddress: address,
-      note: `Bitcoin · ${row.hash.slice(0, 10)}…`,
-      txHash: row.hash,
-    });
-  }
-
-  return txs.sort((a, b) => a.date.localeCompare(b.date));
-}
-
 export async function fetchLiveWalletTxs(options: {
   address: string;
   linkedAddresses?: string[];
-}): Promise<{ address: string; chain: string; txs: CryptoTx[] }> {
-  const address = options.address.trim();
+}): Promise<{
+  address: string;
+  ens?: string;
+  chain: string;
+  txs: CryptoTx[];
+}> {
+  let resolved: { address: string; ens?: string };
+  try {
+    resolved = await resolveWalletAddress(options.address);
+  } catch (e) {
+    if (e instanceof EnsResolveError) throw e;
+    throw new EnsResolveError(
+      "resolve_failed",
+      e instanceof Error ? e.message : "ENS resolve failed",
+    );
+  }
+
+  const address = resolved.address;
   const chain = detectChain(address);
   if (!chain) {
-    throw new Error("Enter a valid Ethereum (0x…) or Bitcoin address.");
-  }
-
-  if (chain === "ethereum") {
-    const key = process.env.ETHERSCAN_API_KEY || "";
-    const txs = await fetchEthereumWalletTxs(
-      address,
-      key,
-      options.linkedAddresses ?? [],
+    throw new Error(
+      "Enter a valid Ethereum address (0x…) or ENS name (name.eth).",
     );
-    return { address, chain, txs };
   }
 
-  const txs = await fetchBitcoinWalletTxs(address);
-  return { address, chain, txs: collapseWraps(txs) };
+  const key = process.env.ETHERSCAN_API_KEY || "";
+  const txs = await fetchEthereumWalletTxs(
+    address,
+    key,
+    options.linkedAddresses ?? [],
+  );
+  return { address, ens: resolved.ens, chain, txs };
 }

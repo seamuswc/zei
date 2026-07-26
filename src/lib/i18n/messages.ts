@@ -64,15 +64,20 @@ export const messages = {
     wallet_kicker: "02 · オンチェーン · ライブ",
     wallet_title: "ウォレット接続",
     wallet_desc:
-      "Ethereum（ネイティブ＋主要ERC-20）またはBitcoinをライブ取得し、円換算します。",
-    wallet_address: "ウォレットアドレス",
+      "ETH / EVMアドレスまたはENS名（ネイティブ＋主要ERC-20）をライブ取得し、円換算します。",
+    wallet_address: "ETH / EVMアドレス / ENS",
     wallet_sync: "接続して同期",
     wallet_syncing: "同期中…",
+    wallet_resolving: "ENSを解決しています…",
     wallet_sync_wait:
       "同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
     wallet_hint:
-      "アドレスを入れるだけです。Ethereumの照会はサーバー側で行います。APIキーは不要です。1件終わってから次のアドレスを追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
+      "0xアドレスまたはENS名（例: vitalik.eth）を貼り付けてください。ENSはサーバー側で解決します。APIキーは不要です。1件終わってから次を追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
     wallet_linked: "接続済み: {address}",
+    wallet_linked_ens: "接続済み: {ens} → {address}",
+    wallet_resolved: "解決済み: {ens} → {address}",
+    wallet_ens_invalid:
+      "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
     wallet_sync_ok:
       "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
     unlink: "解除",
@@ -384,15 +389,20 @@ export const messages = {
     wallet_kicker: "02 · On-chain · live",
     wallet_title: "Connect wallet",
     wallet_desc:
-      "Live read: Ethereum native + major ERC-20, or Bitcoin — priced to JPY.",
-    wallet_address: "Wallet address",
+      "Live read: ETH / EVM address or ENS (native + major ERC-20) — priced to JPY.",
+    wallet_address: "ETH / EVM address / ENS",
     wallet_sync: "Connect & sync",
     wallet_syncing: "Syncing…",
+    wallet_resolving: "Resolving ENS…",
     wallet_sync_wait:
       "Sync in progress — please wait. You can’t add another address until this finishes.",
     wallet_hint:
-      "Paste an address only. Ethereum lookups use the server — no API key needed. Add another address after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
+      "Paste a 0x address or ENS name (e.g. vitalik.eth). ENS is resolved on the server — no API key needed. Add another after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
     wallet_linked: "Linked: {address}",
+    wallet_linked_ens: "Linked: {ens} → {address}",
+    wallet_resolved: "Resolved: {ens} → {address}",
+    wallet_ens_invalid:
+      "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
     wallet_sync_ok:
       "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
     unlink: "Unlink",
