@@ -1,0 +1,19 @@
+---
+description: Always commit, push, and deploy product changes to the live droplet
+alwaysApply: true
+---
+
+# Always push and deploy
+
+After finishing product/code changes the user would expect on the live site:
+
+1. **Commit** (HEREDOC message; no secrets; follow git safety rules)
+2. **Push** to `origin` (usually `main`)
+3. **Deploy** to production droplet `root@167.71.217.5`, app at `/var/www/zei`, pm2 process `zei`:
+   - `git fetch && git reset --hard origin/main`
+   - `npm ci && npm run build`
+   - `pm2 restart zei --update-env`
+   - Fix corrupted `node_modules`/npm cache if build fails, then rebuild
+4. Verify HTTP 200 on the droplet (or https://cryptozei.com / www)
+
+Do this by default — do not leave finished work “local only” unless the user explicitly says not to deploy (e.g. experiment-only).
