@@ -47,16 +47,12 @@ export const messages = {
 
     wallet_kicker: "02 · オンチェーン · ライブ",
     wallet_title: "ウォレット接続",
-    wallet_desc:
-      "同じEVMアドレスをEtherscan対応の全チェーンで自動同期（ネイティブ＋主要ERC-20＋内部送金）し、円換算します。アドレスまたはENSを貼るだけです。",
     wallet_address: "EVMアドレス / ENS",
     wallet_sync: "接続して同期",
     wallet_syncing: "同期中…",
     wallet_resolving: "ENSを解決しています…",
     wallet_sync_wait:
       "全チェーンを同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
-    wallet_hint:
-      "0xアドレスまたはENS名（例: vitalik.eth）を貼り付けて同期 — 同じアドレスでEtherscan対応の全EVMチェーンを自動取得します。ENS解決はEthereumメインネットのみです。APIキーは不要です。1件終わってから次を追加できます。DeFiは自動ラベル付けします — Reviewで確認してください。",
     wallet_chains_limit: "チェーンを制限（上級）",
     wallet_chains_limit_hint:
       "通常は不要です。特定チェーンだけ同期したいときだけチェックを外してください。",
@@ -417,16 +413,12 @@ export const messages = {
 
     wallet_kicker: "02 · On-chain · live",
     wallet_title: "Connect wallet",
-    wallet_desc:
-      "One EVM address syncs automatically across all Etherscan-supported chains (native + major ERC-20 + internal transfers) — priced to JPY. Paste an address or ENS and sync.",
     wallet_address: "EVM address / ENS",
     wallet_sync: "Connect & sync",
     wallet_syncing: "Syncing…",
     wallet_resolving: "Resolving ENS…",
     wallet_sync_wait:
       "Syncing all chains — please wait. You can’t add another address until this finishes.",
-    wallet_hint:
-      "Paste a 0x address or ENS name (e.g. vitalik.eth) and sync — the same address is fetched on every Etherscan EVM chain automatically. ENS resolves on Ethereum mainnet only. No API key needed. Add another after this sync completes. DeFi is auto-labeled when possible — check Review.",
     wallet_chains_limit: "Limit chains (advanced)",
     wallet_chains_limit_hint:
       "Usually unnecessary. Uncheck chains only if you want a narrower sync.",

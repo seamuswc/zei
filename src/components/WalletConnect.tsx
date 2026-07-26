@@ -171,7 +171,6 @@ export function WalletConnect() {
       <div className="import-panel__head">
         <p className="import-kicker">{t("wallet_kicker")}</p>
         <h3>{t("wallet_title")}</h3>
-        <p>{t("wallet_desc")}</p>
       </div>
 
       <label className="field">
@@ -301,7 +300,6 @@ export function WalletConnect() {
         </p>
       )}
 
-      <p className="field-hint">{t("wallet_hint")}</p>
       {resolvedLine && <p className="status-ok">{resolvedLine}</p>}
       {status && <p className="status-ok">{status}</p>}
       {error && <p className="status-err-line">{error}</p>}
