@@ -95,6 +95,7 @@ export function AuthMenu() {
     }
   }
 
+  /** Ends the session cookie only — keeps local ledger + linked accounts. */
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);

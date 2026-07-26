@@ -29,6 +29,7 @@ type AuthCtx = {
   isPro: boolean;
   refreshMe: () => Promise<void>;
   startProPay: () => Promise<void>;
+  /** Session only — never clears portfolio / linked accounts. */
   setUser: (u: AuthUser | null) => void;
 };
 
@@ -44,12 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otherIncomeJpy,
     incomeProvided,
     year,
+    ledgerReady,
   } = usePortfolio();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<UsdcInvoiceClient | null>(null);
   /** Skip autosave right after hydrate / login so we don't overwrite or echo. */
   const skipSaveRef = useRef(true);
+  const txsRef = useRef(txs);
+  txsRef.current = txs;
 
   const refreshMe = useCallback(async () => {
     const res = await fetch("/api/auth/me");
@@ -63,18 +67,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       taxYears?: YearCarryRow[];
     };
+    // Auth session only — never clear local ledger / linked wallets when user is null.
     setUser(data.user);
-    // After hydrating server data, skip one autosave echo. If there is no
-    // cloud ledger, allow the next effect to persist local (or empty) state.
-    skipSaveRef.current = !!data.ledger;
-    if (data.ledger) hydrateFromServer(data.ledger);
-    if (data.taxYears) setTaxYears(data.taxYears);
+
+    const serverTxs = data.ledger?.txs;
+    const serverHasTxs = Array.isArray(serverTxs) && serverTxs.length > 0;
+    const localHasTxs = txsRef.current.length > 0;
+
+    if (serverHasTxs && data.ledger) {
+      // Cloud wins when it has rows.
+      skipSaveRef.current = true;
+      hydrateFromServer(data.ledger);
+    } else if (localHasTxs) {
+      // Empty/missing cloud ledger must not wipe local imports (or flash-empty).
+      skipSaveRef.current = false;
+    } else {
+      skipSaveRef.current = false;
+    }
+
+    if (data.taxYears?.length) setTaxYears(data.taxYears);
     setLoading(false);
   }, [hydrateFromServer, setTaxYears]);
 
+  // Wait for localStorage restore so merge policy sees real local txs.
   useEffect(() => {
+    if (!ledgerReady) return;
     void refreshMe();
-  }, [refreshMe]);
+  }, [ledgerReady, refreshMe]);
 
   useEffect(() => {
     if (loading || !user?.emailVerified) return;

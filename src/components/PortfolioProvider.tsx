@@ -22,6 +22,7 @@ import { applyLossCarrySeries } from "@/lib/tax/loss-carry";
 import { filingTaxYears } from "@/lib/billing";
 
 const LINKS_STORAGE_KEY = "zei_linked_accounts";
+const LEDGER_STORAGE_KEY = "zei_local_ledger";
 
 /** Map ledger `exchange` labels (or ids) → link badge ids. */
 const EXCHANGE_LINK_IDS: Record<string, string> = {
@@ -102,6 +103,43 @@ function writeStoredLinks(data: StoredLinks) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(LINKS_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+type StoredLedger = {
+  v: 1;
+  txs: CryptoTx[];
+  otherIncomeJpy: number;
+  incomeProvided: boolean;
+  year: number;
+};
+
+function readStoredLedger(): StoredLedger | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LEDGER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredLedger>;
+    if (!Array.isArray(parsed.txs)) return null;
+    const year = Number(parsed.year);
+    return {
+      v: 1,
+      txs: parsed.txs as CryptoTx[],
+      otherIncomeJpy: Math.max(0, Number(parsed.otherIncomeJpy) || 0),
+      incomeProvided: !!parsed.incomeProvided,
+      year: Number.isFinite(year) ? year : filingTaxYears()[0] - 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredLedger(data: StoredLedger) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LEDGER_STORAGE_KEY, JSON.stringify(data));
   } catch {
     /* ignore quota / private mode */
   }
@@ -189,6 +227,8 @@ interface PortfolioState {
   updateTx: (id: string, patch: Partial<CryptoTx>) => void;
   removeTx: (id: string) => void;
   toggleExclude: (id: string) => void;
+  /** True once local ledger/links have been read from storage (auth may hydrate after). */
+  ledgerReady: boolean;
   hydrateFromServer: (data: {
     txs: CryptoTx[];
     otherIncomeJpy: number;
@@ -235,9 +275,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   >({});
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
   const [linksReady, setLinksReady] = useState(false);
+  const [ledgerReady, setLedgerReady] = useState(false);
   /** True once localStorage had an entry (including empty arrays after unlink). */
   const hadStoredLinksRef = useRef(false);
   const seededFromTxsRef = useRef(false);
+  /** Cloud hydrate already applied — don't let a late local restore overwrite it. */
+  const serverHydratedRef = useRef(false);
   /** Latest link fields for synchronous persist (avoids stale closures). */
   const linksSnapshotRef = useRef({
     linkedWallets: [] as string[],
@@ -275,8 +318,19 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // Restore linked accounts from localStorage (survives refresh).
+  // Restore ledger + linked accounts from localStorage (survives logout/refresh).
+  // Auth must wait for ledgerReady before cloud hydrate so we don't flash-empty.
   useEffect(() => {
+    const storedLedger = readStoredLedger();
+    if (storedLedger && !serverHydratedRef.current) {
+      const collapsed = collapseWraps(matchTransfers(storedLedger.txs).txs);
+      setTxs(collapsed);
+      setTaxYears(recomputeLocalYears(collapsed));
+      setOtherIncomeJpyState(storedLedger.otherIncomeJpy);
+      setIncomeProvided(storedLedger.incomeProvided);
+      setYear(storedLedger.year);
+    }
+
     const stored = readStoredLinks();
     if (stored) {
       hadStoredLinksRef.current = true;
@@ -293,6 +347,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       };
     }
     setLinksReady(true);
+    setLedgerReady(true);
   }, []);
 
   // Persist link badges whenever they change.
@@ -308,6 +363,18 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     }
     flushLinks({ linkedWallets, walletEnsLabels, linkedExchanges });
   }, [linksReady, linkedWallets, walletEnsLabels, linkedExchanges, flushLinks]);
+
+  // Persist ledger locally so logout / refresh still shows imports.
+  useEffect(() => {
+    if (!ledgerReady) return;
+    writeStoredLedger({
+      v: 1,
+      txs,
+      otherIncomeJpy,
+      incomeProvided,
+      year,
+    });
+  }, [ledgerReady, txs, otherIncomeJpy, incomeProvided, year]);
 
   // One-time recovery: if user never had stored links, rebuild badges from ledger.
   useEffect(() => {
@@ -388,6 +455,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       linkedWallets: [],
       walletEnsLabels: {},
       linkedExchanges: [],
+    });
+    writeStoredLedger({
+      v: 1,
+      txs: [],
+      otherIncomeJpy: 0,
+      incomeProvided: false,
+      year: filingTaxYears()[0] - 1,
     });
   }, [flushLinks]);
 
@@ -515,6 +589,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       incomeProvided: boolean;
       year: number;
     }) => {
+      serverHydratedRef.current = true;
       commitTxs(data.txs);
       setOtherIncomeJpyState(data.otherIncomeJpy);
       setIncomeProvided(data.incomeProvided);
@@ -535,6 +610,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       walletEnsLabels,
       linkedExchanges,
       availableYears,
+      ledgerReady,
       addTxs,
       clearTxs,
       setYear,
@@ -561,6 +637,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       walletEnsLabels,
       linkedExchanges,
       availableYears,
+      ledgerReady,
       addTxs,
       clearTxs,
       setOtherIncomeJpy,
