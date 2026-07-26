@@ -23,25 +23,12 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/**
- * CoinGecko routing:
- * - No key → public api.coingecko.com
- * - Key set → pro-api.coingecko.com + x-cg-pro-api-key (Basic/Analyst/Lite/Enterprise)
- * - COINGECKO_USE_DEMO=1 → Demo host + x-cg-demo-api-key (Demo free tier only)
- * - COINGECKO_API_BASE overrides the root (still /api/v3 appended if missing)
- *
- * Note: paid "Basic" keys often start with `CG-` — prefix alone is NOT Demo.
- */
-function useCoinGeckoDemo(): boolean {
-  const v = (process.env.COINGECKO_USE_DEMO || "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "demo";
-}
-
+/** CoinGecko Demo (`CG-…`) or Pro key. */
 function coingeckoHeaders(): HeadersInit {
   const key = (process.env.COINGECKO_API_KEY || "").trim();
   const headers: Record<string, string> = { accept: "application/json" };
   if (!key) return headers;
-  if (useCoinGeckoDemo()) {
+  if (key.startsWith("CG-")) {
     headers["x-cg-demo-api-key"] = key;
   } else {
     headers["x-cg-pro-api-key"] = key;
@@ -50,14 +37,11 @@ function coingeckoHeaders(): HeadersInit {
 }
 
 function coingeckoBase(): string {
-  const override = (process.env.COINGECKO_API_BASE || "").trim().replace(/\/$/, "");
-  if (override) {
-    return override.endsWith("/api/v3") ? override : `${override}/api/v3`;
-  }
   const key = (process.env.COINGECKO_API_KEY || "").trim();
-  if (!key) return "https://api.coingecko.com/api/v3";
-  if (useCoinGeckoDemo()) return "https://api.coingecko.com/api/v3";
-  return "https://pro-api.coingecko.com/api/v3";
+  if (key && !key.startsWith("CG-")) {
+    return "https://pro-api.coingecko.com/api/v3";
+  }
+  return "https://api.coingecko.com/api/v3";
 }
 
 export type PriceHint = {
