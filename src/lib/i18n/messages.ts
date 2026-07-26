@@ -66,6 +66,8 @@ export const messages = {
     wallet_sync_ok:
       "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
     unlink: "解除",
+    unlink_wallet_cleared:
+      "解除しました — そのウォレットから取り込んだ取引を台帳から削除しました。他のウォレットのデータは残ります。",
     unlink_kept_txs:
       "解除しました — 取込済みの取引は確認・税額結果に残ります。消すときは「台帳をクリア」。",
 
@@ -132,7 +134,7 @@ export const messages = {
     results_export: "税理士向けに出力",
     results_clear: "台帳をクリア",
     results_clear_hint:
-      "ウォレット／取引所の「解除」では雑所得は消えません。取込データを消すときは「台帳をクリア」を使います。",
+      "ウォレットの「解除」はそのウォレット分の取込行だけ削除します。取引所の「解除」では取引は残り、「台帳をクリア」ですべて消えます。",
     results_active: "有効な取引",
     results_matched: "振替マッチ",
     results_income: "報酬・受取",
@@ -387,6 +389,8 @@ export const messages = {
     wallet_sync_ok:
       "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
     unlink: "Unlink",
+    unlink_wallet_cleared:
+      "Unlinked — that wallet’s imported rows were removed from the ledger. Other wallets’ data is kept.",
     unlink_kept_txs:
       "Unlinked — imported transactions stay in Review / results until you clear them.",
 
@@ -455,7 +459,7 @@ export const messages = {
     results_export: "Export for accountant",
     results_clear: "Clear ledger",
     results_clear_hint:
-      "Unlinking a wallet/exchange does not remove 雑所得. Use Clear ledger to wipe imported transactions and results.",
+      "Unlinking a wallet removes that wallet’s imported rows. Unlinking an exchange leaves txs until you Clear ledger (wipes everything).",
     results_active: "Active txs",
     results_matched: "Matched transfers",
     results_income: "Income / rewards",

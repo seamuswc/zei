@@ -117,6 +117,41 @@ function linksFromTxs(txs: CryptoTx[]): {
   return { wallets: [...wallets], exchanges: [...exchanges] };
 }
 
+/**
+ * True when a ledger row belongs to the wallet being unlinked.
+ * Prefers `walletAddress` (stamped on sync). Falls back to address substrings
+ * in common fields for legacy rows; optionally drops unstamped `source:wallet`
+ * rows when this is the last linked wallet.
+ */
+function walletTxMatchesAddress(
+  t: CryptoTx,
+  address: string,
+  opts: { clearUnstampedWalletSource: boolean },
+): boolean {
+  const target = address.trim().toLowerCase();
+  if (!target) return false;
+
+  const stamped = t.walletAddress?.trim().toLowerCase();
+  if (stamped && stamped === target) return true;
+
+  const haystacks = [t.id, t.note, t.txHash].filter(
+    (s): s is string => typeof s === "string" && s.length > 0,
+  );
+  for (const h of haystacks) {
+    if (h.toLowerCase().includes(target)) return true;
+  }
+
+  if (
+    opts.clearUnstampedWalletSource &&
+    t.source === "wallet" &&
+    !stamped
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 interface PortfolioState {
   txs: CryptoTx[];
   year: number;
@@ -316,21 +351,38 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /** Clear link badge only — ledger / tax calc stays untouched. */
-  const unlinkWallet = useCallback((address: string) => {
-    const target = address.trim().toLowerCase();
-    setLinkedWallets((prev) => {
-      const next = prev.filter((a) => a.toLowerCase() !== target);
-      setConnectedWallet(next[next.length - 1]);
-      return next;
-    });
-    setWalletEnsLabels((prev) => {
-      if (!(target in prev)) return prev;
-      const next = { ...prev };
-      delete next[target];
-      return next;
-    });
-  }, []);
+  /** Unlink wallet badge and remove that wallet’s imported ledger rows. */
+  const unlinkWallet = useCallback(
+    (address: string) => {
+      const target = address.trim().toLowerCase();
+      if (!target) return;
+      const remaining = linkedWallets.filter(
+        (a) => a.toLowerCase() !== target,
+      );
+      const clearUnstampedWalletSource = remaining.length === 0;
+      setLinkedWallets(remaining);
+      setConnectedWallet(remaining[remaining.length - 1]);
+      setWalletEnsLabels((prev) => {
+        if (!(target in prev)) return prev;
+        const next = { ...prev };
+        delete next[target];
+        return next;
+      });
+      setTxs((prev) => {
+        const filtered = prev.filter(
+          (t) =>
+            !walletTxMatchesAddress(t, target, {
+              clearUnstampedWalletSource,
+            }),
+        );
+        if (filtered.length === prev.length) return prev;
+        const collapsed = collapseWraps(matchTransfers(filtered).txs);
+        setTaxYears(recomputeLocalYears(collapsed));
+        return collapsed;
+      });
+    },
+    [linkedWallets],
+  );
 
   /** Add/update one exchange link — never wipes other linked exchanges. */
   const markExchangeLinked = useCallback((id: string) => {

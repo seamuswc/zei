@@ -181,7 +181,7 @@ export function WalletConnect() {
                   className="btn btn--ghost btn--sm"
                   onClick={() => {
                     unlinkWallet(w);
-                    setStatus(t("unlink_kept_txs"));
+                    setStatus(t("unlink_wallet_cleared"));
                     setError(null);
                     setResolvedLine(null);
                   }}
