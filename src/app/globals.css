@@ -1249,6 +1249,73 @@ select {
   background: rgba(255, 255, 255, 0.7);
 }
 
+.ledger-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ledger-scroll table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.ledger-scroll th:first-child,
+.ledger-scroll td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.ledger-scroll th:first-child {
+  z-index: 2;
+  background: color-mix(in oklab, var(--fog) 70%, white);
+}
+
+.ledger-scroll tr.row-excluded td:first-child {
+  background: color-mix(in oklab, var(--fog) 55%, white);
+}
+
+.ledger-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.ledger-pager__meta {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 12rem;
+}
+
+.ledger-pager__size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ledger-pager__size .cell-input {
+  width: auto;
+  min-width: 5.5rem;
+}
+
+.ledger-pager__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ledger-pager__page {
+  min-width: 4.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

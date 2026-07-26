@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { TxSide } from "@/lib/tax/types";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { formatJpy } from "@/lib/tax/engine";
@@ -19,9 +20,22 @@ const SIDES: TxSide[] = [
   "repay",
 ];
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 0] as const;
+
 export function ReviewLedger() {
   const { txs, updateTx, removeTx, toggleExclude } = usePortfolio();
   const { t } = useI18n();
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(0);
+
+  const total = txs.length;
+  const effectiveSize = pageSize === 0 ? Math.max(total, 1) : pageSize;
+  const pageCount = Math.max(1, Math.ceil(total / effectiveSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const start = total === 0 ? 0 : currentPage * effectiveSize;
+  const end = Math.min(start + effectiveSize, total);
+  const pageTxs = txs.slice(start, end);
+
   if (txs.length === 0) return null;
 
   function sideLabel(side: TxSide) {
@@ -35,7 +49,54 @@ export function ReviewLedger() {
         <h2>{t("review_title")}</h2>
         <p>{t("review_sub")}</p>
       </div>
-      <div className="table-wrap">
+      <div className="ledger-pager">
+        <p className="ledger-pager__meta">
+          {t("ledger_showing", {
+            from: total === 0 ? 0 : start + 1,
+            to: end,
+            total,
+          })}
+        </p>
+        <label className="ledger-pager__size">
+          <span>{t("ledger_page_size")}</span>
+          <select
+            className="cell-input cell-input--side"
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(0);
+            }}
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? t("ledger_page_all") : n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="ledger-pager__nav">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            disabled={currentPage <= 0}
+            onClick={() => setPage(Math.max(0, currentPage - 1))}
+          >
+            {t("ledger_prev")}
+          </button>
+          <span className="ledger-pager__page">
+            {t("ledger_page", { page: currentPage + 1, pages: pageCount })}
+          </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            disabled={currentPage >= pageCount - 1}
+            onClick={() => setPage(Math.min(pageCount - 1, currentPage + 1))}
+          >
+            {t("ledger_next")}
+          </button>
+        </div>
+      </div>
+      <div className="table-wrap ledger-scroll">
         <table>
           <thead>
             <tr>
@@ -51,7 +112,7 @@ export function ReviewLedger() {
             </tr>
           </thead>
           <tbody>
-            {txs.map((tx) => (
+            {pageTxs.map((tx) => (
               <tr
                 key={tx.id}
                 className={tx.excluded ? "row-excluded" : undefined}

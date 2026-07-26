@@ -185,6 +185,12 @@ export const messages = {
     review_delete: "削除",
     review_auto: "自動",
     review_matched: "マッチ済",
+    ledger_showing: "{from}–{to} / 全{total}件",
+    ledger_page_size: "表示件数",
+    ledger_page_all: "すべて",
+    ledger_prev: "前へ",
+    ledger_next: "次へ",
+    ledger_page: "{page} / {pages}",
 
     footer:
       "ZEI · 暗号資産の雑所得のみ。確定申告の代わりではありません。税理士向けZIPは「税額年度」→「税理士向けに出力」から。税務・法務・会計の助言ではありません。",
@@ -496,6 +502,12 @@ export const messages = {
     review_delete: "Delete",
     review_auto: "auto",
     review_matched: "matched",
+    ledger_showing: "Showing {from}–{to} of {total}",
+    ledger_page_size: "Page size",
+    ledger_page_all: "All",
+    ledger_prev: "Prev",
+    ledger_next: "Next",
+    ledger_page: "{page} / {pages}",
 
     footer:
       "ZEI · Crypto 雑所得 only — not a full tax return (確定申告). Export ZIP from Tax year → Export for accountant. Not tax advice.",
