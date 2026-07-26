@@ -189,12 +189,6 @@ export function ExchangeLink() {
         </button>
       </div>
 
-      <p className="field-hint">{t("exchange_csv_alt")}</p>
-
-      {status && <p className="status-ok">{status}</p>}
-      {warning && <p className="status-warn">{warning}</p>}
-      {error && <p className="status-err-line">{error}</p>}
-
       {linkedExchanges.length > 0 && (
         <ul className="link-list" aria-label={t("exchange_linked")}>
           {linkedExchanges.map((id) => (
@@ -214,6 +208,12 @@ export function ExchangeLink() {
           ))}
         </ul>
       )}
+
+      <p className="field-hint">{t("exchange_csv_alt")}</p>
+
+      {status && <p className="status-ok">{status}</p>}
+      {warning && <p className="status-warn">{warning}</p>}
+      {error && <p className="status-err-line">{error}</p>}
     </div>
   );
 }

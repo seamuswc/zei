@@ -115,16 +115,19 @@ function linksFromTxs(txs: CryptoTx[]): {
   const wallets = new Set<string>();
   const exchanges = new Set<string>();
   for (const t of txs) {
-    if (t.source === "wallet" && t.walletAddress) {
-      const a = t.walletAddress.trim().toLowerCase();
-      if (a) wallets.add(a);
-    }
+    // Prefer stamped address (any source — wraps/transfers may keep the stamp).
+    const stamped = t.walletAddress?.trim().toLowerCase();
+    if (stamped) wallets.add(stamped);
     if (t.source === "exchange" && t.exchange) {
       const id = resolveExchangeLinkId(t.exchange);
       if (id) exchanges.add(id);
     }
   }
   return { wallets: [...wallets], exchanges: [...exchanges] };
+}
+
+function persistLinks(data: StoredLinks) {
+  writeStoredLinks(data);
 }
 
 /**
@@ -235,6 +238,42 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   /** True once localStorage had an entry (including empty arrays after unlink). */
   const hadStoredLinksRef = useRef(false);
   const seededFromTxsRef = useRef(false);
+  /** Latest link fields for synchronous persist (avoids stale closures). */
+  const linksSnapshotRef = useRef({
+    linkedWallets: [] as string[],
+    walletEnsLabels: {} as Record<string, string>,
+    linkedExchanges: [] as string[],
+  });
+  linksSnapshotRef.current = {
+    linkedWallets,
+    walletEnsLabels,
+    linkedExchanges,
+  };
+
+  const flushLinks = useCallback(
+    (next?: {
+      linkedWallets?: string[];
+      walletEnsLabels?: Record<string, string>;
+      linkedExchanges?: string[];
+    }) => {
+      const snap = {
+        v: 1 as const,
+        linkedWallets: next?.linkedWallets ?? linksSnapshotRef.current.linkedWallets,
+        walletEnsLabels:
+          next?.walletEnsLabels ?? linksSnapshotRef.current.walletEnsLabels,
+        linkedExchanges:
+          next?.linkedExchanges ?? linksSnapshotRef.current.linkedExchanges,
+      };
+      linksSnapshotRef.current = {
+        linkedWallets: snap.linkedWallets,
+        walletEnsLabels: snap.walletEnsLabels,
+        linkedExchanges: snap.linkedExchanges,
+      };
+      hadStoredLinksRef.current = true;
+      persistLinks(snap);
+    },
+    [],
+  );
 
   // Restore linked accounts from localStorage (survives refresh).
   useEffect(() => {
@@ -247,6 +286,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       setConnectedWallet(
         stored.linkedWallets[stored.linkedWallets.length - 1],
       );
+      linksSnapshotRef.current = {
+        linkedWallets: stored.linkedWallets,
+        walletEnsLabels: stored.walletEnsLabels,
+        linkedExchanges: stored.linkedExchanges,
+      };
     }
     setLinksReady(true);
   }, []);
@@ -262,14 +306,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     ) {
       return;
     }
-    hadStoredLinksRef.current = true;
-    writeStoredLinks({
-      v: 1,
-      linkedWallets,
-      walletEnsLabels,
-      linkedExchanges,
-    });
-  }, [linksReady, linkedWallets, walletEnsLabels, linkedExchanges]);
+    flushLinks({ linkedWallets, walletEnsLabels, linkedExchanges });
+  }, [linksReady, linkedWallets, walletEnsLabels, linkedExchanges, flushLinks]);
 
   // One-time recovery: if user never had stored links, rebuild badges from ledger.
   useEffect(() => {
@@ -285,6 +323,17 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setLinkedExchanges(derived.exchanges);
     setConnectedWallet(derived.wallets[derived.wallets.length - 1]);
   }, [linksReady, txs]);
+
+  // Wallet badges: if state/storage is empty but the ledger still has stamped
+  // wallet addresses (e.g. cloud hydrate after a poisoned empty localStorage),
+  // restore the list. Safe because wallet Unlink removes that wallet’s txs.
+  useEffect(() => {
+    if (!linksReady || linkedWallets.length > 0 || !txs.length) return;
+    const wallets = linksFromTxs(txs).wallets;
+    if (!wallets.length) return;
+    setLinkedWallets(wallets);
+    setConnectedWallet(wallets[wallets.length - 1]);
+  }, [linksReady, txs, linkedWallets.length]);
 
   // Continuous calendar span (min tx year → max(tx year, this calendar year))
   // so gaps like 2021–2023 stay selectable even with no txs (empty results).
@@ -335,14 +384,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setLinkedWallets([]);
     setWalletEnsLabels({});
     setLinkedExchanges([]);
-    hadStoredLinksRef.current = true;
-    writeStoredLinks({
-      v: 1,
+    flushLinks({
       linkedWallets: [],
       walletEnsLabels: {},
       linkedExchanges: [],
     });
-  }, []);
+  }, [flushLinks]);
 
   const setOtherIncomeJpy = useCallback((n: number) => {
     setOtherIncomeJpyState(Math.max(0, n));
@@ -350,16 +397,26 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** Add/update one wallet link — never wipes other linked wallets. */
-  const markWalletLinked = useCallback((address: string, ens?: string) => {
-    const a = address.trim().toLowerCase();
-    if (!a) return;
-    setLinkedWallets((prev) => (prev.includes(a) ? prev : [...prev, a]));
-    setConnectedWallet(a);
-    const label = ens?.trim().toLowerCase();
-    if (label) {
-      setWalletEnsLabels((prev) => ({ ...prev, [a]: label }));
-    }
-  }, []);
+  const markWalletLinked = useCallback(
+    (address: string, ens?: string) => {
+      const a = address.trim().toLowerCase();
+      if (!a) return;
+      const prev = linksSnapshotRef.current.linkedWallets;
+      const nextWallets = prev.includes(a) ? prev : [...prev, a];
+      const label = ens?.trim().toLowerCase();
+      const nextEns = label
+        ? { ...linksSnapshotRef.current.walletEnsLabels, [a]: label }
+        : linksSnapshotRef.current.walletEnsLabels;
+      setLinkedWallets(nextWallets);
+      setConnectedWallet(a);
+      if (label) setWalletEnsLabels(nextEns);
+      flushLinks({
+        linkedWallets: nextWallets,
+        walletEnsLabels: nextEns,
+      });
+    },
+    [flushLinks],
+  );
 
   /** Unlink wallet badge and remove that wallet’s imported ledger rows. */
   const unlinkWallet = useCallback(
@@ -370,13 +427,14 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         (a) => a.toLowerCase() !== target,
       );
       const clearUnstampedWalletSource = remaining.length === 0;
+      const nextEns = { ...linksSnapshotRef.current.walletEnsLabels };
+      delete nextEns[target];
       setLinkedWallets(remaining);
       setConnectedWallet(remaining[remaining.length - 1]);
-      setWalletEnsLabels((prev) => {
-        if (!(target in prev)) return prev;
-        const next = { ...prev };
-        delete next[target];
-        return next;
+      setWalletEnsLabels(nextEns);
+      flushLinks({
+        linkedWallets: remaining,
+        walletEnsLabels: nextEns,
       });
       setTxs((prev) => {
         const filtered = prev.filter(
@@ -391,20 +449,31 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         return collapsed;
       });
     },
-    [linkedWallets],
+    [linkedWallets, flushLinks],
   );
 
   /** Add/update one exchange link — never wipes other linked exchanges. */
-  const markExchangeLinked = useCallback((id: string) => {
-    setLinkedExchanges((prev) =>
-      prev.includes(id) ? prev : [...prev, id],
-    );
-  }, []);
+  const markExchangeLinked = useCallback(
+    (id: string) => {
+      const prev = linksSnapshotRef.current.linkedExchanges;
+      const next = prev.includes(id) ? prev : [...prev, id];
+      setLinkedExchanges(next);
+      flushLinks({ linkedExchanges: next });
+    },
+    [flushLinks],
+  );
 
   /** Clear link badge only — ledger / tax calc stays untouched. */
-  const unlinkExchange = useCallback((id: string) => {
-    setLinkedExchanges((prev) => prev.filter((x) => x !== id));
-  }, []);
+  const unlinkExchange = useCallback(
+    (id: string) => {
+      const next = linksSnapshotRef.current.linkedExchanges.filter(
+        (x) => x !== id,
+      );
+      setLinkedExchanges(next);
+      flushLinks({ linkedExchanges: next });
+    },
+    [flushLinks],
+  );
 
   const updateTx = useCallback(
     (id: string, patch: Partial<CryptoTx>) => {

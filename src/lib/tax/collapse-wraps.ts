@@ -46,6 +46,8 @@ export function collapseWraps(txs: CryptoTx[]): CryptoTx[] {
           quantity: sell.quantity,
           jpyValue: 0,
           source: sell.source,
+          exchange: sell.exchange ?? buy.exchange,
+          walletAddress: sell.walletAddress ?? buy.walletAddress,
           note: `wrap ${sell.asset}→${buy.asset} (not taxed)`,
           txHash: sell.txHash,
           counterAsset: buy.asset.toUpperCase(),

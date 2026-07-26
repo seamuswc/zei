@@ -151,18 +151,7 @@ export function WalletConnect() {
         </button>
       </div>
 
-      {busy && (
-        <p className="wallet-sync-banner" role="status" aria-live="polite">
-          <span className="spinner" aria-hidden />
-          {busyBanner}
-        </p>
-      )}
-
-      <p className="field-hint">{t("wallet_hint")}</p>
-      {resolvedLine && <p className="status-ok">{resolvedLine}</p>}
-      {status && <p className="status-ok">{status}</p>}
-      {error && <p className="status-err-line">{error}</p>}
-
+      {/* Always under the sync form whenever anything is linked (incl. after refresh). */}
       {linkedWallets.length > 0 && (
         <ul className="link-list" aria-label={t("wallet_linked_list")}>
           {linkedWallets.map((w) => {
@@ -194,6 +183,18 @@ export function WalletConnect() {
           })}
         </ul>
       )}
+
+      {busy && (
+        <p className="wallet-sync-banner" role="status" aria-live="polite">
+          <span className="spinner" aria-hidden />
+          {busyBanner}
+        </p>
+      )}
+
+      <p className="field-hint">{t("wallet_hint")}</p>
+      {resolvedLine && <p className="status-ok">{resolvedLine}</p>}
+      {status && <p className="status-ok">{status}</p>}
+      {error && <p className="status-err-line">{error}</p>}
     </div>
   );
 }
