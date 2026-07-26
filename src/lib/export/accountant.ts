@@ -129,7 +129,7 @@ export function buildAccountantPack(options: {
     `- 所得には売却益のほか、エアドロップ/ステーキング等の受取時時価（income）を含みます。`,
     `- 借入（borrow）は所得ではありません。返済（repay）は売却ではありません（元本の返却として在庫のみ減算）。`,
     `- 取引所↔ウォレットの振替は可能な範囲でマッチし、譲渡益を認識しません。`,
-    `- 円換算根拠列: exchange_fill / coingecko_history / coingecko_spot / csv_provided / derived_trade 等。`,
+    `- 円換算根拠列: exchange_fill / coingecko_history / coingecko_spot / coingecko_underlying / csv_provided / derived_trade 等。`,
     `- 本出力は申告の補助資料です。最終判断は税理士 / 納税者ご本人が行ってください。`,
     ``,
     `【サマリー ${year}】`,

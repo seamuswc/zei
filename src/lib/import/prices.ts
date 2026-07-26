@@ -1,14 +1,21 @@
 import type { PriceSource } from "@/lib/tax/types";
-import {
-  coinIdForAsset,
-  ERC20_SYMBOLS,
-} from "@/lib/import/prices-data";
+import { resolveCoinId, ERC20_SYMBOLS } from "@/lib/import/prices-data";
+import { isAToken } from "@/lib/import/token-aliases";
 
 export {
   coinIdForAsset,
+  resolveCoinId,
   ERC20_SYMBOLS,
   COIN_IDS,
 } from "@/lib/import/prices-data";
+
+export {
+  SYMBOL_TO_COINGECKO,
+  ATOKEN_TO_UNDERLYING,
+  LEGACY_TO_CURRENT,
+  isATokenUnderlyingPair,
+  underlyingOfAToken,
+} from "@/lib/import/token-aliases";
 
 const mem = new Map<string, { jpy: number; source: PriceSource }>();
 
@@ -71,10 +78,15 @@ export async function resolveJpyUnitPrice(
   const hit = mem.get(cacheKey);
   if (hit) return hit;
 
-  let coinId: string | null = hint.coinId ?? coinIdForAsset(assetKey);
+  const resolved = hint.coinId
+    ? { coinId: hint.coinId, viaUnderlying: false }
+    : resolveCoinId(assetKey);
+  let coinId: string | null = resolved.coinId;
+  let viaUnderlying = resolved.viaUnderlying;
   if (!coinId && hint.tokenContract) {
     coinId =
       ERC20_SYMBOLS[hint.tokenContract.toLowerCase()]?.coinId ?? null;
+    if (coinId && isAToken(assetKey)) viaUnderlying = true;
   }
   if (!coinId) {
     throw new Error(
@@ -106,7 +118,12 @@ export async function resolveJpyUnitPrice(
     };
     const jpy = data.market_data?.current_price?.jpy;
     if (typeof jpy === "number" && jpy > 0) {
-      const out = { jpy, source: "coingecko_history" as const };
+      const out = {
+        jpy,
+        source: (viaUnderlying
+          ? "coingecko_underlying"
+          : "coingecko_history") as PriceSource,
+      };
       mem.set(cacheKey, out);
       return out;
     }
@@ -125,7 +142,12 @@ export async function resolveJpyUnitPrice(
   const spot = (await spotRes.json()) as Record<string, { jpy?: number }>;
   const jpy = spot[coinId]?.jpy;
   if (!jpy) throw new Error(`No JPY price for ${assetKey}`);
-  const out = { jpy, source: "coingecko_spot" as const };
+  const out = {
+    jpy,
+    source: (viaUnderlying
+      ? "coingecko_underlying"
+      : "coingecko_spot") as PriceSource,
+  };
   mem.set(cacheKey, out);
   return out;
 }

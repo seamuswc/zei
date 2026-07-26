@@ -17,6 +17,8 @@ export type PriceSource =
   | "onchain"
   | "coingecko_history"
   | "coingecko_spot"
+  /** aToken (etc.) priced from underlying CoinGecko series. */
+  | "coingecko_underlying"
   | "csv_provided"
   | "derived_trade"
   | "manual"

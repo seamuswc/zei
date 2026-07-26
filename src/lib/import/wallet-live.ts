@@ -1,10 +1,11 @@
 import type { CryptoTx, PriceSource } from "@/lib/tax/types";
 import {
   ERC20_SYMBOLS,
-  coinIdForAsset,
+  resolveCoinId,
   loadDailyJpySeries,
   nearestDailyJpy,
 } from "@/lib/import/prices";
+import { isAToken } from "@/lib/import/token-aliases";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 import {
   classifyWalletLegs,
@@ -137,10 +138,12 @@ async function etherscanListBothEnds<T extends { hash: string; timeStamp: string
 function priceFromSeries(
   series: Series | null,
   date: string,
+  viaUnderlying = false,
 ): { jpy: number; source: PriceSource } {
   if (!series) return { jpy: 0, source: "unknown" };
   const jpy = nearestDailyJpy(series.byDate, date);
   if (jpy == null || !(jpy > 0)) return { jpy: 0, source: "unknown" };
+  if (viaUnderlying) return { jpy, source: "coingecko_underlying" };
   return { jpy, source: series.source };
 }
 
@@ -279,6 +282,7 @@ export async function fetchEthereumWalletTxs(
       from: string;
       to: string;
       coinId: string | null;
+      viaUnderlying: boolean;
       knownAsset: boolean;
     };
     const tokenRows: TokenRow[] = [];
@@ -299,7 +303,10 @@ export async function fetchEthereumWalletTxs(
       const direction =
         to === addr ? "in" : from === addr ? "out" : null;
       if (!direction) continue;
-      const coinId = meta?.coinId ?? coinIdForAsset(symbol);
+      const resolved = resolveCoinId(symbol);
+      const coinId = meta?.coinId ?? resolved.coinId;
+      const viaUnderlying =
+        Boolean(coinId) && (resolved.viaUnderlying || isAToken(symbol));
       tokenRows.push({
         row,
         contract,
@@ -310,7 +317,8 @@ export async function fetchEthereumWalletTxs(
         from,
         to,
         coinId,
-        knownAsset: Boolean(meta),
+        viaUnderlying,
+        knownAsset: Boolean(meta) || Boolean(coinId),
       });
     }
 
@@ -329,7 +337,11 @@ export async function fetchEthereumWalletTxs(
 
     for (const r of tokenRows) {
       const series = r.coinId ? seriesByCoin.get(r.coinId) ?? null : null;
-      const { jpy, source } = priceFromSeries(series, r.date);
+      const { jpy, source } = priceFromSeries(
+        series,
+        r.date,
+        r.viaUnderlying,
+      );
       legs.push({
         id: uid("erc"),
         date: r.date,

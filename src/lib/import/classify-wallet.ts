@@ -5,6 +5,10 @@ import {
   isAirdropDistributor,
   isLendingPool,
 } from "@/lib/import/defi-labels";
+import {
+  isAToken,
+  isATokenUnderlyingPair,
+} from "@/lib/import/token-aliases";
 
 /** Intermediate wallet transfer leg before side classification. */
 export interface WalletLeg {
@@ -163,9 +167,10 @@ function classifyHashGroup(
     isLendingPool(counterparty(l)),
   );
 
-  // 1) Wrap / 2) Swap — only when the hash is not a lending-pool interaction.
-  // (Aave supply mints aTokens in-hash and must not become a fake crypto↔crypto trade.)
-  if (!touchesLending && outs.length === 1 && ins.length === 1) {
+  // 1) Wrap / aToken supply·withdraw / 2) Swap
+  // aToken pairs (LEND↔ALEND, DAI↔ADAI, ETH↔AETH…) are never derived_trade swaps —
+  // even when the counterparty is not in ETH_MAINNET_DEFI_LABELS (common on Aave V1).
+  if (outs.length === 1 && ins.length === 1) {
     const o = outs[0];
     const i = ins[0];
     if (isWrapPair(o.asset, i.asset) && approxEq(o.qty, i.qty)) {
@@ -189,8 +194,58 @@ function classifyHashGroup(
       return out;
     }
 
+    if (isATokenUnderlyingPair(o.asset, i.asset)) {
+      // Supply / withdraw receipt — wrap-like when ~1:1, else transfer_* (interest).
+      if (approxEq(o.qty, i.qty)) {
+        out.push({
+          id: `wrap_${o.leg.id}`,
+          date: o.leg.date,
+          asset: o.asset,
+          side: "wrap",
+          quantity: o.qty,
+          jpyValue: 0,
+          source: "wallet",
+          walletAddress: o.leg.walletAddress,
+          note: withAutoNote(
+            undefined,
+            `aToken ${o.asset}↔${i.asset} (supply/withdraw, not taxed)`,
+          ),
+          txHash: o.leg.txHash,
+          counterAsset: i.asset,
+          priceSource: o.leg.priceSource ?? i.leg.priceSource ?? "unknown",
+        });
+      } else {
+        out.push(
+          toTx(
+            { ...o.leg, asset: o.asset, quantity: o.qty, jpyValue: o.jpyValue },
+            "transfer_out",
+            {
+              jpyValue: 0,
+              note: withAutoNote(
+                o.leg.note,
+                `aToken ${o.asset}→${i.asset} supply/withdraw`,
+              ),
+            },
+          ),
+          toTx(
+            { ...i.leg, asset: i.asset, quantity: i.qty, jpyValue: i.jpyValue },
+            "transfer_in",
+            {
+              jpyValue: 0,
+              note: withAutoNote(
+                i.leg.note,
+                `aToken ${i.asset}←${o.asset} supply/withdraw`,
+              ),
+            },
+          ),
+        );
+      }
+      return out;
+    }
+
     // Crypto↔crypto swap: shared JPY on sell+buy (matches CSV trade expansion)
-    if (o.asset !== i.asset) {
+    // Skip when this hash touches a known lending pool (mixed supply legs).
+    if (!touchesLending && o.asset !== i.asset) {
       const sellLeg: WalletLeg = {
         ...o.leg,
         asset: o.asset,
@@ -289,8 +344,9 @@ function classifyHashGroup(
       continue;
     }
 
-    // Skip aToken / unknown legs paired with a lending interaction
-    if (touchesLending && leg.knownAsset === false) {
+    // Skip unknown / aToken legs paired with a lending interaction
+    // (paired aToken↔underlying already handled above as wrap/transfer).
+    if (touchesLending && (leg.knownAsset === false || isAToken(leg.asset))) {
       continue;
     }
 

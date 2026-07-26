@@ -170,7 +170,7 @@ function leg(partial: Partial<WalletLeg> & Pick<WalletLeg, "id" | "asset" | "dir
   }
 }
 
-// Supply-like: out to pool + unknown aToken in → transfer_out, not swap
+// Supply-like: out to pool + unknown aToken in → transfer/wrap, not swap
 {
   const txs = classifyWalletLegs([
     leg({
@@ -197,8 +197,81 @@ function leg(partial: Partial<WalletLeg> & Pick<WalletLeg, "id" | "asset" | "dir
   if (txs.some((t) => t.side === "sell" || t.side === "buy")) {
     throw new Error("lending supply must not classify as swap buy/sell");
   }
-  if (!txs.some((t) => t.side === "transfer_out" && t.asset === "USDC")) {
-    throw new Error("expected USDC transfer_out for supply-like hash");
+  const wrapOrTransfer = txs.some(
+    (t) =>
+      t.side === "wrap" ||
+      (t.side === "transfer_out" && t.asset === "USDC"),
+  );
+  if (!wrapOrTransfer) {
+    throw new Error("expected wrap or USDC transfer_out for supply-like hash");
+  }
+}
+
+// LEND↔ALEND without known pool address (Aave V1-style) must not be a swap
+{
+  const hash = "0xlendalend";
+  const txs = classifyWalletLegs([
+    leg({
+      id: "lend_out",
+      asset: "LEND",
+      direction: "out",
+      quantity: 1000,
+      jpyValue: 50_000,
+      txHash: hash,
+      from: WALLET,
+      to: DEX,
+      knownAsset: true,
+    }),
+    leg({
+      id: "alend_in",
+      asset: "ALEND",
+      direction: "in",
+      quantity: 1000,
+      jpyValue: 50_000,
+      txHash: hash,
+      from: DEX,
+      to: WALLET,
+      knownAsset: true,
+    }),
+  ]);
+  if (txs.some((t) => t.side === "sell" || t.side === "buy")) {
+    throw new Error("LEND↔ALEND must not classify as derived_trade swap");
+  }
+  if (!txs.some((t) => t.side === "wrap" && t.asset === "LEND")) {
+    throw new Error(`expected LEND wrap for aToken supply, got ${txs.map((t) => t.side)}`);
+  }
+}
+
+// ETH↔AETH aToken pair
+{
+  const hash = "0xaeth";
+  const txs = classifyWalletLegs([
+    leg({
+      id: "eth_out",
+      asset: "ETH",
+      direction: "out",
+      quantity: 2,
+      jpyValue: 400_000,
+      txHash: hash,
+      from: WALLET,
+      to: DEX,
+    }),
+    leg({
+      id: "aeth_in",
+      asset: "AETH",
+      direction: "in",
+      quantity: 2,
+      jpyValue: 400_000,
+      txHash: hash,
+      from: DEX,
+      to: WALLET,
+    }),
+  ]);
+  if (txs.some((t) => t.side === "sell" || t.side === "buy")) {
+    throw new Error("ETH↔AETH must not classify as swap");
+  }
+  if (txs[0]?.side !== "wrap") {
+    throw new Error(`expected wrap for ETH↔AETH, got ${txs[0]?.side}`);
   }
 }
 

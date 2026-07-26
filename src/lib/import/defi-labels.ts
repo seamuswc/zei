@@ -32,6 +32,18 @@ export const ETH_MAINNET_DEFI_LABELS: Record<string, DefiLabel> = {
     note: "WETH",
   },
 
+  // Aave V1 LendingPool (ETHLend era — LEND / aLEND)
+  "0x398ec7346dcd622edc5ae82352f02be94c62d119": {
+    kind: "lending_pool",
+    name: "Aave V1 LendingPool",
+    note: "Aave V1",
+  },
+  // Aave V2 LendingPool
+  "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9": {
+    kind: "lending_pool",
+    name: "Aave V2 LendingPool",
+    note: "Aave V2",
+  },
   // Aave V3 Pool (Ethereum)
   "0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2": {
     kind: "lending_pool",
