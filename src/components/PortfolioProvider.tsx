@@ -17,7 +17,7 @@ import {
 import { matchTransfers } from "@/lib/tax/transfers";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 import { applyLossCarrySeries } from "@/lib/tax/loss-carry";
-import { filingTaxYear } from "@/lib/billing";
+import { filingTaxYears } from "@/lib/billing";
 
 interface PortfolioState {
   txs: CryptoTx[];
@@ -77,8 +77,8 @@ function recomputeLocalYears(txs: CryptoTx[]): YearCarryRow[] {
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [txs, setTxs] = useState<CryptoTx[]>([]);
-  // Prefer a non-filing year so free users land on an unlocked year.
-  const [year, setYear] = useState(() => filingTaxYear() - 1);
+  // Prefer an unlocked year so free users don't land on a Pro paywall.
+  const [year, setYear] = useState(() => filingTaxYears()[0] - 1);
   const [otherIncomeJpy, setOtherIncomeJpyState] = useState(0);
   const [incomeProvided, setIncomeProvided] = useState(false);
   const [taxYears, setTaxYears] = useState<YearCarryRow[]>([]);
@@ -89,14 +89,24 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   >({});
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
 
+  // Continuous calendar span (min tx year → max(tx year, this calendar year))
+  // so gaps like 2021–2023 stay selectable even with no txs (empty results).
   const availableYears = useMemo(() => {
-    const years = new Set<number>([2024, 2025, 2026]);
+    const calendarYear = new Date().getFullYear();
+    let min: number | null = null;
+    let max = calendarYear;
     for (const t of txs) {
       const y = Number(t.date.slice(0, 4));
-      if (Number.isFinite(y)) years.add(y);
+      if (!Number.isFinite(y)) continue;
+      if (min == null || y < min) min = y;
+      if (y > max) max = y;
     }
-    years.add(year);
-    return [...years].sort((a, b) => b - a);
+    if (min == null) min = Math.min(year, calendarYear);
+    min = Math.min(min, year);
+    max = Math.max(max, year, calendarYear);
+    const years: number[] = [];
+    for (let y = max; y >= min; y--) years.push(y);
+    return years;
   }, [txs, year]);
 
   const commitTxs = useCallback((next: CryptoTx[]) => {

@@ -14,7 +14,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { PortfolioProvider } from "./PortfolioProvider";
 import { I18nProvider, useI18n } from "./I18nProvider";
 import { AuthProvider, useAuth } from "./AuthProvider";
-import { filingTaxYear } from "@/lib/billing";
+import { filingTaxYears } from "@/lib/billing";
 
 function FreemiumBanner() {
   const { t } = useI18n();
@@ -23,7 +23,7 @@ function FreemiumBanner() {
 
   if (loading || isPro) return null;
 
-  const year = filingTaxYear();
+  const [lastYear, thisYear] = filingTaxYears();
 
   async function unlock() {
     if (!user) {
@@ -40,7 +40,7 @@ function FreemiumBanner() {
 
   return (
     <div className="freemium-banner" role="status">
-      <p>{t("freemium_banner", { year })}</p>
+      <p>{t("freemium_banner", { lastYear, thisYear })}</p>
       <button
         type="button"
         className="btn btn--solid btn--sm"
@@ -91,28 +91,14 @@ function AppShell() {
           <FreemiumBanner />
 
           <main id="top">
-            <section className="hero">
-              <div className="hero__copy">
-                <p className="hero__brand">{t("brand")}</p>
-                <h1>{t("hero_title")}</h1>
-                <p className="hero__sub">{t("hero_sub")}</p>
-                <div className="hero__cta">
-                  <a className="btn btn--solid" href="#import">
-                    {t("hero_cta_import")}
-                  </a>
-                  <a className="btn btn--ghost" href="#export">
-                    {t("hero_cta_export")}
-                  </a>
-                  <TaxRulesGuide />
-                </div>
-              </div>
-            </section>
-
             <section className="import" id="import">
               <div className="section-intro">
                 <p className="import-kicker">{t("import_kicker")}</p>
                 <h2>{t("import_title")}</h2>
                 <p>{t("import_sub")}</p>
+                <p className="muted">
+                  <a href="#export">{t("import_export_link")}</a>
+                </p>
               </div>
               <div className="import-grid">
                 <SpreadsheetUpload />

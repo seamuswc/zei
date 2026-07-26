@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { filingTaxYear } from "@/lib/billing";
+import { filingTaxYears } from "@/lib/billing";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
 
@@ -114,7 +114,8 @@ export function AuthMenu() {
     }
   }
 
-  const filingYear = filingTaxYear();
+  const [lastYear, thisYear] = filingTaxYears();
+  const filingVars = { lastYear, thisYear };
 
   return (
     <div className="auth-menu">
@@ -129,7 +130,7 @@ export function AuthMenu() {
         <div className="auth-panel">
           {!user ? (
             <>
-              <p className="auth-pricing">{t("auth_pricing", { year: filingYear })}</p>
+              <p className="auth-pricing">{t("auth_pricing", filingVars)}</p>
               <div className="preset-row">
                 <button
                   type="button"
@@ -233,10 +234,10 @@ export function AuthMenu() {
                 {user.emailVerified ? t("auth_verified") : t("auth_unverified")} ·{" "}
                 {isPro
                   ? t("auth_plan_pro")
-                  : t("auth_plan_free", { year: filingYear })}
+                  : t("auth_plan_free", filingVars)}
               </p>
               {!isPro && (
-                <p className="auth-pricing">{t("auth_pricing", { year: filingYear })}</p>
+                <p className="auth-pricing">{t("auth_pricing", filingVars)}</p>
               )}
               <div className="import-actions">
                 {!isPro && (

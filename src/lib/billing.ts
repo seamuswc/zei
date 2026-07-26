@@ -1,9 +1,15 @@
 /**
- * The Japan tax year that matters for filing / Pro unlock.
- * In calendar year Y, that is usually Y−1 (the return people prepare).
+ * Japan tax years that matter for filing / late filing / Pro unlock.
+ * In calendar year Y: last year (Y−1) and this year (Y).
  */
+export function filingTaxYears(now = new Date()): [number, number] {
+  const calendarYear = now.getFullYear();
+  return [calendarYear - 1, calendarYear];
+}
+
+/** Older of the two locked years (calendarYear − 1). */
 export function filingTaxYear(now = new Date()): number {
-  return now.getFullYear() - 1;
+  return filingTaxYears(now)[0];
 }
 
 export function isFilingYearLocked(
@@ -11,5 +17,6 @@ export function isFilingYearLocked(
   isPro: boolean,
   now = new Date(),
 ): boolean {
-  return !isPro && year === filingTaxYear(now);
+  if (isPro) return false;
+  return filingTaxYears(now).includes(year);
 }

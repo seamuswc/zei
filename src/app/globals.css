@@ -216,10 +216,6 @@ select {
   white-space: nowrap;
 }
 
-.hero__cta .rules-trigger {
-  align-self: center;
-}
-
 .rules-modal {
   position: fixed;
   inset: 0;
@@ -414,60 +410,6 @@ select {
   border: 1px solid var(--line);
 }
 
-.hero {
-  display: grid;
-  gap: 2rem;
-  padding: 3.5rem 1.5rem 3rem;
-  max-width: 1120px;
-  margin: 0 auto;
-  min-height: min(88vh, 820px);
-  align-items: center;
-}
-
-@media (min-width: 900px) {
-  .hero {
-    gap: 2.5rem;
-    padding-top: 4.5rem;
-  }
-}
-
-.hero__brand {
-  font-family: var(--font-display);
-  font-size: clamp(3.5rem, 10vw, 6.5rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 0.9;
-  margin: 0 0 1rem;
-  color: var(--ink);
-  animation: rise 0.8s ease both;
-}
-
-.hero h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(1.55rem, 3.2vw, 2.15rem);
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  max-width: 16ch;
-  animation: rise 0.9s ease 0.05s both;
-}
-
-.hero__sub {
-  margin: 1rem 0 0;
-  max-width: 36ch;
-  font-size: 1.05rem;
-  color: var(--ink-soft);
-  animation: rise 1s ease 0.1s both;
-}
-
-.hero__cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.75rem;
-  animation: rise 1.05s ease 0.15s both;
-}
-
 .section-intro,
 .import,
 .income,
@@ -479,7 +421,17 @@ select {
 }
 
 .import {
-  padding: 1rem 0 3rem;
+  padding: 2rem 0 3rem;
+}
+
+.section-intro .muted a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.section-intro .muted a:hover {
+  color: var(--ink);
 }
 
 .section-intro {
@@ -495,12 +447,17 @@ select {
   letter-spacing: -0.02em;
 }
 
-.section-intro p:last-child,
+.section-intro h2 + p,
+.section-intro .muted,
 .results > p,
 .ledger__head p:last-child {
   margin: 0;
   color: var(--ink-soft);
   max-width: 48ch;
+}
+
+.section-intro .muted {
+  margin-top: 0.45rem;
 }
 
 .import-kicker {
@@ -1355,17 +1312,6 @@ th {
   padding: 2rem 0 2.5rem;
   color: var(--ink-soft);
   font-size: 0.85rem;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .import-panel--busy {

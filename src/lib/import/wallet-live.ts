@@ -67,6 +67,9 @@ async function etherscanGet(
 
 type Series = { byDate: Map<string, number>; source: PriceSource };
 
+/** Per-list page size. Oldest-only truncates recent tax years on busy wallets. */
+const ETHERSCAN_PAGE = "150";
+
 async function loadSeriesForCoin(
   coinId: string,
   dates: string[],
@@ -82,6 +85,53 @@ async function loadSeriesForCoin(
   } catch {
     return null;
   }
+}
+
+/**
+ * Fetch oldest chunk + newest chunk and merge, so early cost basis and
+ * current filing years both survive the per-list cap.
+ */
+async function etherscanListBothEnds<T extends { hash: string; timeStamp: string }>(
+  base: Record<string, string>,
+  apiKey: string,
+  rowKey: (row: T) => string,
+): Promise<{ rows: T[]; error?: string }> {
+  const oldest = (await etherscanGet(
+    { ...base, page: "1", offset: ETHERSCAN_PAGE, sort: "asc" },
+    apiKey,
+  )) as { status: string; message: string; result: T[] | string };
+
+  const newest = (await etherscanGet(
+    { ...base, page: "1", offset: ETHERSCAN_PAGE, sort: "desc" },
+    apiKey,
+  )) as { status: string; message: string; result: T[] | string };
+
+  const byKey = new Map<string, T>();
+  for (const block of [oldest.result, newest.result]) {
+    if (!Array.isArray(block)) continue;
+    for (const row of block) byKey.set(rowKey(row), row);
+  }
+
+  if (byKey.size === 0) {
+    for (const block of [oldest, newest]) {
+      if (
+        typeof block.result === "string" &&
+        !/no transactions/i.test(block.result)
+      ) {
+        return {
+          rows: [],
+          error: block.result || block.message || "Etherscan error",
+        };
+      }
+    }
+    return { rows: [] };
+  }
+
+  return {
+    rows: [...byKey.values()].sort(
+      (a, b) => Number(a.timeStamp) - Number(b.timeStamp),
+    ),
+  };
 }
 
 function priceFromSeries(
@@ -109,121 +159,116 @@ export async function fetchEthereumWalletTxs(
   const addr = address.toLowerCase();
   const legs: WalletLeg[] = [];
 
-  const native = (await etherscanGet(
+  const native = await etherscanListBothEnds<EtherscanTx>(
     {
       module: "account",
       action: "txlist",
       address,
       startblock: "0",
       endblock: "99999999",
-      page: "1",
-      offset: "150",
-      sort: "asc",
     },
     key,
-  )) as { status: string; message: string; result: EtherscanTx[] | string };
+    (row) => row.hash.toLowerCase(),
+  );
+  if (native.error) throw new Error(native.error);
 
   const ethDates: string[] = [];
-  if (Array.isArray(native.result)) {
-    for (const row of native.result) {
-      if (row.isError === "1") continue;
-      ethDates.push(
-        new Date(Number(row.timeStamp) * 1000).toISOString().slice(0, 10),
-      );
-    }
+  for (const row of native.rows) {
+    if (row.isError === "1") continue;
+    ethDates.push(
+      new Date(Number(row.timeStamp) * 1000).toISOString().slice(0, 10),
+    );
   }
 
   const ethSeries = await loadSeriesForCoin("ethereum", ethDates);
 
-  if (Array.isArray(native.result)) {
-    for (const row of native.result) {
-      if (row.isError === "1") continue;
-      const from = row.from.toLowerCase();
-      const to = (row.to || "").toLowerCase();
-      const date = new Date(Number(row.timeStamp) * 1000)
-        .toISOString()
-        .slice(0, 10);
-      const { jpy, source } = priceFromSeries(ethSeries, date);
+  for (const row of native.rows) {
+    if (row.isError === "1") continue;
+    const from = row.from.toLowerCase();
+    const to = (row.to || "").toLowerCase();
+    const date = new Date(Number(row.timeStamp) * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const { jpy, source } = priceFromSeries(ethSeries, date);
 
-      const wei = BigInt(row.value || "0");
-      // Zero-value txs are usually approve / contract calls — skip the native leg.
-      // Gas fee is still recorded when we are the sender.
-      if (wei > BigInt(0)) {
-        const qty = Number(wei) / 1e18;
-        if (qty >= 1e-8) {
-          const direction =
-            to === addr ? "in" : from === addr ? "out" : null;
-          if (direction) {
-            legs.push({
-              id: uid("eth"),
-              date,
-              asset: "ETH",
-              quantity: qty,
-              jpyValue: Math.round(qty * jpy),
-              unitPriceJpy: jpy,
-              priceSource: source,
-              direction,
-              from,
-              to,
-              txHash: row.hash,
-              walletAddress: address,
-              note: `ETH · ${row.hash.slice(0, 10)}…`,
-              knownAsset: true,
-            });
-          }
-        }
-      }
-
-      if (from === addr && row.gasUsed && row.gasPrice) {
-        const gasEth =
-          (Number(BigInt(row.gasUsed)) * Number(BigInt(row.gasPrice))) / 1e18;
-        if (gasEth > 1e-10) {
+    const wei = BigInt(row.value || "0");
+    // Zero-value txs are usually approve / contract calls — skip the native leg.
+    // Gas fee is still recorded when we are the sender.
+    if (wei > BigInt(0)) {
+      const qty = Number(wei) / 1e18;
+      if (qty >= 1e-8) {
+        const direction =
+          to === addr ? "in" : from === addr ? "out" : null;
+        if (direction) {
           legs.push({
-            id: uid("gas"),
+            id: uid("eth"),
             date,
             asset: "ETH",
-            quantity: gasEth,
-            jpyValue: Math.round(gasEth * jpy),
+            quantity: qty,
+            jpyValue: Math.round(qty * jpy),
             unitPriceJpy: jpy,
             priceSource: source,
-            direction: "out",
+            direction,
             from,
-            to: to || from,
+            to,
             txHash: row.hash,
             walletAddress: address,
-            note: `gas · ${row.hash.slice(0, 10)}…`,
+            note: `ETH · ${row.hash.slice(0, 10)}…`,
             knownAsset: true,
-            isFee: true,
           });
         }
       }
     }
-  } else if (
-    typeof native.result === "string" &&
-    !/no transactions/i.test(native.result)
-  ) {
-    throw new Error(native.result || native.message || "Etherscan error");
+
+    if (from === addr && row.gasUsed && row.gasPrice) {
+      const gasEth =
+        (Number(BigInt(row.gasUsed)) * Number(BigInt(row.gasPrice))) / 1e18;
+      if (gasEth > 1e-10) {
+        legs.push({
+          id: uid("gas"),
+          date,
+          asset: "ETH",
+          quantity: gasEth,
+          jpyValue: Math.round(gasEth * jpy),
+          unitPriceJpy: jpy,
+          priceSource: source,
+          direction: "out",
+          from,
+          to: to || from,
+          txHash: row.hash,
+          walletAddress: address,
+          note: `gas · ${row.hash.slice(0, 10)}…`,
+          knownAsset: true,
+          isFee: true,
+        });
+      }
+    }
   }
 
-  const tokens = (await etherscanGet(
+  const tokens = await etherscanListBothEnds<EtherscanTokenTx>(
     {
       module: "account",
       action: "tokentx",
       address,
       startblock: "0",
       endblock: "99999999",
-      page: "1",
-      offset: "150",
-      sort: "asc",
     },
     key,
-  )) as {
-    status: string;
-    message: string;
-    result: EtherscanTokenTx[] | string;
-  };
+    (row) =>
+      [
+        row.hash,
+        row.contractAddress,
+        row.from,
+        row.to,
+        row.value,
+        row.timeStamp,
+      ]
+        .join(":")
+        .toLowerCase(),
+  );
+  if (tokens.error) throw new Error(tokens.error);
 
-  if (Array.isArray(tokens.result)) {
+  if (tokens.rows.length > 0) {
     type TokenRow = {
       row: EtherscanTokenTx;
       contract: string;
@@ -237,7 +282,7 @@ export async function fetchEthereumWalletTxs(
       knownAsset: boolean;
     };
     const tokenRows: TokenRow[] = [];
-    for (const row of tokens.result) {
+    for (const row of tokens.rows) {
       const contract = row.contractAddress.toLowerCase();
       const meta = ERC20_SYMBOLS[contract];
       const symbol = (meta?.symbol || row.tokenSymbol || "TOKEN").toUpperCase();

@@ -20,7 +20,7 @@ export const apiMessages = {
     login_required: "ログインが必要です。",
     verify_before_save: "保存前にメール確認が必要です。",
     pro_required:
-      "申告年度の合計・出力にはProプランが必要です。USDCで決済して解除してください。",
+      "今年・昨年の合計・出力にはProプランが必要です。USDCで決済して解除してください。",
     payment_failed: "決済に失敗しました。",
     wallet_address_required: "ウォレットアドレスが必要です。",
     wallet_address_invalid:
@@ -56,7 +56,7 @@ export const apiMessages = {
     login_required: "Login required.",
     verify_before_save: "Verify your email before saving.",
     pro_required:
-      "Pro plan required for filing-year totals and export. Pay with USDC to unlock.",
+      "Pro plan required for this-year and last-year totals and export. Pay with USDC to unlock.",
     payment_failed: "Payment failed.",
     wallet_address_required: "Wallet address is required.",
     wallet_address_invalid:

@@ -15,40 +15,24 @@ export const messages = {
 
     wip_banner: "現在準備中です — まだ本番公開前です。見つけた方へ：もう少しお待ちください。",
     freemium_banner:
-      "無料で取込・確認・過去年の税額を試せます。確定申告に使う{year}年分の合計・出力はProで解除。",
+      "暗号資産のみ。無料は取込・確認・それより前の年の税額。Proで今年と昨年（{lastYear}年・{thisYear}年）の合計・出力を解除 — 申告・期限後の対応で使う年です。",
     freemium_cta_login: "ログインしてProへ",
     freemium_cta_pay: "USDCでProを解除",
-    freemium_locked_kicker: "申告年度 · Pro",
-    freemium_locked_title: "{year}年はProで解除",
+    freemium_locked_kicker: "今年・昨年 · Pro",
+    freemium_locked_title: "{lastYear}年・{thisYear}年はProで解除",
     freemium_locked_body:
-      "無料プランでは取込・台帳確認・他の年の計算は自由です。いま申告で使う{year}年の雑所得合計と税理士向けZIPだけがProです。",
+      "無料プランでは取込・台帳確認・それより前の年の計算は自由です。今年と昨年（{lastYear}年・{thisYear}年）の雑所得合計と税理士向けZIPだけがProです。",
     freemium_export_locked:
-      "{year}年（申告年度）の税理士向けZIPはProで解除されます。他の年は無料で出力できます。",
-    freemium_table_locked: "申告年度の明細はProで表示されます。",
+      "{lastYear}年・{thisYear}年（今年・昨年）の税理士向けZIPはProで解除されます。それより前の年は無料で出力できます。",
+    freemium_table_locked: "今年・昨年の明細はProで表示されます。",
     freemium_cell_locked: "Pro",
     freemium_year_option: "{year} · Pro",
-    hero_title: "日本居住者向け暗号資産の税務",
-    hero_sub:
-      "暗号資産のみ。無料で取込・確認・過去年まで試せます。申告年度の合計とZIP出力はPro（USDC）。確定申告の代わりではありません。",
-    hero_cta_import: "取引を取り込む",
-    hero_cta_export: "税理士向け出力",
     tax_rules: "税制の説明",
-    hero_col_buy: "買付",
-    hero_col_sell: "売却",
-    hero_col_basis: "原価",
-    hero_col_income: "所得",
-    hero_row_sell: "売",
-    hero_row_nontax: "非課税",
-    hero_row_accountant: "税理士",
-    hero_row_export: "出力",
-    hero_row_misc: "雑所得",
-    hero_row_crypto_only: "暗号のみ",
-    hero_row_net: "ネット",
-    hero_stamp: "移動平均法",
-    import_kicker: "データを取り込む",
+    import_kicker: "日本居住者向け · 暗号資産税",
     import_title: "CSV・ウォレット・取引所",
     import_sub:
-      "価格の優先順：取引所約定 → オンチェーン／公開価格 → CoinGecko → 確認画面で手動。ラップは非課税です。",
+      "取込から計算まで。価格の優先順：取引所約定 → オンチェーン／公開価格 → CoinGecko → 確認画面で手動。ラップは非課税です。",
+    import_export_link: "結果・税理士向け出力は下へ →",
 
     csv_kicker: "01 · スプレッドシート",
     csv_title: "CSV / Excelをアップロード",
@@ -203,7 +187,7 @@ export const messages = {
     review_matched: "マッチ済",
 
     footer:
-      "ZEI · 税理士向けZIPは「税額年度」→「税理士向けに出力」から。税務・法務・会計の助言ではありません。",
+      "ZEI · 暗号資産の雑所得のみ。確定申告の代わりではありません。税理士向けZIPは「税額年度」→「税理士向けに出力」から。税務・法務・会計の助言ではありません。",
 
     auth_login: "ログイン",
     auth_register: "アカウント作成",
@@ -219,16 +203,16 @@ export const messages = {
     auth_verified: "確認済み",
     auth_unverified: "未確認",
     auth_pricing:
-      "無料：取込・確認・過去年の計算＋クラウド自動保存。Pro：申告年度{year}年の合計・税理士ZIPを解除。",
-    auth_plan_free: "Free（{year}年ロック）",
+      "無料：取込・確認・それより前の年の計算＋クラウド自動保存。Pro：今年と昨年（{lastYear}年・{thisYear}年）の合計・税理士ZIPを解除。",
+    auth_plan_free: "Free（{lastYear}・{thisYear}年ロック）",
     auth_plan_pro: "Pro",
-    auth_pay: "USDCでPro（申告年度を解除）",
+    auth_pay: "USDCでPro（今年・昨年を解除）",
     auth_autosave_hint:
       "メール確認済みのアカウントでは、取込・編集・クリアがクラウドに自動保存されます。",
     pay_title: "USDCでProを購入",
     pay_close: "閉じる",
     pay_lead:
-      "申告年度の税額合計と税理士ZIPを解除します。ブラウザのウォレットを接続し、表示のUSDCを送金してください。",
+      "今年と昨年の税額合計と税理士ZIPを解除します。ブラウザのウォレットを接続し、表示のUSDCを送金してください。",
     pay_steps_title: "流れ",
     pay_step1: "ウォレットを接続する",
     pay_step2: "ウォレットでUSDC送金を承認する",
@@ -340,40 +324,24 @@ export const messages = {
     wip_banner:
       "Still under construction — not launched yet. If you found this early: hang tight.",
     freemium_banner:
-      "Free: import, review, and try every year except the {year} filing year. Pro unlocks that year’s totals and export.",
+      "Crypto only. Free: import, review, and older years. Pro unlocks this calendar year and last year ({lastYear} and {thisYear}) — the ones that matter for filing / late filing.",
     freemium_cta_login: "Log in for Pro",
     freemium_cta_pay: "Unlock Pro with USDC",
-    freemium_locked_kicker: "Filing year · Pro",
-    freemium_locked_title: "{year} unlocks with Pro",
+    freemium_locked_kicker: "This year & last · Pro",
+    freemium_locked_title: "{lastYear} and {thisYear} unlock with Pro",
     freemium_locked_body:
-      "Free lets you import, edit the ledger, and run any other year. Only the {year} filing-year totals and accountant ZIP need Pro.",
+      "Free lets you import, edit the ledger, and run older years. Only this year and last year ({lastYear} and {thisYear}) totals and accountant ZIP need Pro.",
     freemium_export_locked:
-      "Accountant ZIP for {year} (the filing year) is Pro. Other years export for free.",
-    freemium_table_locked: "Filing-year detail is shown with Pro.",
+      "Accountant ZIP for {lastYear} and {thisYear} (this year and last) is Pro. Older years export for free.",
+    freemium_table_locked: "This-year and last-year detail is shown with Pro.",
     freemium_cell_locked: "Pro",
     freemium_year_option: "{year} · Pro",
-    hero_title: "Crypto tax for Japan residents",
-    hero_sub:
-      "Crypto only. Free to import, review, and try past years — Pro (USDC) unlocks the filing year’s totals and ZIP. Not a full tax return.",
-    hero_cta_import: "Import activity",
-    hero_cta_export: "Accountant export",
     tax_rules: "Tax rules",
-    hero_col_buy: "Buy",
-    hero_col_sell: "Sell",
-    hero_col_basis: "Basis",
-    hero_col_income: "Income",
-    hero_row_sell: "Sell",
-    hero_row_nontax: "Non-tax",
-    hero_row_accountant: "Accountant",
-    hero_row_export: "Export",
-    hero_row_misc: "Misc income",
-    hero_row_crypto_only: "Crypto only",
-    hero_row_net: "Net",
-    hero_stamp: "Moving average",
-    import_kicker: "Bring data in",
+    import_kicker: "Crypto tax · Japan residents",
     import_title: "CSV, live wallet, live exchange",
     import_sub:
-      "Price order: exchange fill → on-chain/public quote → CoinGecko → manual in Review. Wraps are not taxed.",
+      "Import to calculate. Price order: exchange fill → on-chain/public quote → CoinGecko → manual in Review. Wraps are not taxed.",
+    import_export_link: "Results & accountant export below →",
 
     csv_kicker: "01 · Spreadsheet",
     csv_title: "Upload CSV / Excel export",
@@ -530,7 +498,7 @@ export const messages = {
     review_matched: "matched",
 
     footer:
-      "ZEI · Export ZIP for your tax accountant from Tax year → Export for accountant. Not tax advice.",
+      "ZEI · Crypto 雑所得 only — not a full tax return (確定申告). Export ZIP from Tax year → Export for accountant. Not tax advice.",
 
     auth_login: "Log in",
     auth_register: "Create account",
@@ -546,16 +514,16 @@ export const messages = {
     auth_verified: "Verified",
     auth_unverified: "Unverified",
     auth_pricing:
-      "Free: import, review, past years, and cloud autosave. Pro: unlock {year} filing-year totals and accountant ZIP.",
-    auth_plan_free: "Free ({year} locked)",
+      "Free: import, review, older years, and cloud autosave. Pro: unlock this year and last year ({lastYear} and {thisYear}) totals and accountant ZIP.",
+    auth_plan_free: "Free ({lastYear} & {thisYear} locked)",
     auth_plan_pro: "Pro",
-    auth_pay: "Pay USDC (unlock filing year)",
+    auth_pay: "Pay USDC (unlock this year & last)",
     auth_autosave_hint:
       "With a verified email, imports, edits, and clears autosave to your account.",
     pay_title: "Pay Pro with USDC",
     pay_close: "Close",
     pay_lead:
-      "Unlocks filing-year totals and accountant ZIP. Connect your browser wallet, then send the USDC price shown.",
+      "Unlocks this-year and last-year totals and accountant ZIP. Connect your browser wallet, then send the USDC price shown.",
     pay_steps_title: "How it works",
     pay_step1: "Connect your wallet",
     pay_step2: "Confirm the USDC send in your wallet",

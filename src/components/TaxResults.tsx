@@ -6,7 +6,7 @@ import {
   downloadAccountantZip,
 } from "@/lib/export/accountant";
 import { formatJpy, formatQty } from "@/lib/tax/engine";
-import { filingTaxYear, isFilingYearLocked } from "@/lib/billing";
+import { filingTaxYears, isFilingYearLocked } from "@/lib/billing";
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
@@ -29,15 +29,16 @@ export function TaxResults() {
   const [payBusy, setPayBusy] = useState(false);
 
   const locked = isFilingYearLocked(year, isPro);
-  const filingYear = filingTaxYear();
+  const [lastYear, thisYear] = filingTaxYears();
+  const filingVars = { lastYear, thisYear };
 
-  // Steer free users off the filing year by default (still selectable → paywall).
+  // Steer free users off both locked filing years by default (still selectable → paywall).
   useEffect(() => {
     if (loading || isPro || userPickedYear.current) return;
-    if (year !== filingYear) return;
-    const alt = availableYears.find((y) => y !== filingYear);
+    if (!isFilingYearLocked(year, false)) return;
+    const alt = availableYears.find((y) => !isFilingYearLocked(y, false));
     if (alt != null) setYear(alt);
-  }, [loading, isPro, year, filingYear, availableYears, setYear]);
+  }, [loading, isPro, year, availableYears, setYear]);
 
   if (txs.length === 0) {
     return (
@@ -131,8 +132,8 @@ export function TaxResults() {
       {locked && (
         <div className="paywall">
           <p className="import-kicker">{t("freemium_locked_kicker")}</p>
-          <h3>{t("freemium_locked_title", { year: filingYear })}</h3>
-          <p>{t("freemium_locked_body", { year: filingYear })}</p>
+          <h3>{t("freemium_locked_title", filingVars)}</h3>
+          <p>{t("freemium_locked_body", filingVars)}</p>
           <button
             type="button"
             className="btn btn--solid"
@@ -185,7 +186,7 @@ export function TaxResults() {
 
       <p className="export-banner" id="export-note">
         {locked
-          ? t("freemium_export_locked", { year: filingYear })
+          ? t("freemium_export_locked", filingVars)
           : t("results_export_banner")}
       </p>
 
