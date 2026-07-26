@@ -232,8 +232,14 @@ interface PortfolioState {
   markExchangeLinked: (id: string) => void;
   unlinkExchange: (id: string) => void;
   updateTx: (id: string, patch: Partial<CryptoTx>) => void;
+  updateManyTxs: (
+    ids: string[],
+    patch: Partial<CryptoTx> | ((tx: CryptoTx) => Partial<CryptoTx>),
+  ) => void;
   removeTx: (id: string) => void;
+  removeManyTxs: (ids: string[]) => void;
   toggleExclude: (id: string) => void;
+  setExcludedMany: (ids: string[], excluded: boolean) => void;
   /** True once local ledger/links have been read from storage (auth may hydrate after). */
   ledgerReady: boolean;
   hydrateFromServer: (data: {
@@ -623,6 +629,27 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateManyTxs = useCallback(
+    (
+      ids: string[],
+      patch: Partial<CryptoTx> | ((tx: CryptoTx) => Partial<CryptoTx>),
+    ) => {
+      if (ids.length === 0) return;
+      const idSet = new Set(ids);
+      setTxs((prev) => {
+        const next = prev.map((t) => {
+          if (!idSet.has(t.id)) return t;
+          const p = typeof patch === "function" ? patch(t) : patch;
+          return { ...t, ...p };
+        });
+        const collapsed = collapseWraps(matchTransfers(next).txs);
+        setTaxYears(recomputeLocalYears(collapsed));
+        return collapsed;
+      });
+    },
+    [],
+  );
+
   const removeTx = useCallback((id: string) => {
     setTxs((prev) => {
       const collapsed = collapseWraps(
@@ -633,10 +660,35 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const removeManyTxs = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    setTxs((prev) => {
+      const collapsed = collapseWraps(
+        matchTransfers(prev.filter((t) => !idSet.has(t.id))).txs,
+      );
+      setTaxYears(recomputeLocalYears(collapsed));
+      return collapsed;
+    });
+  }, []);
+
   const toggleExclude = useCallback((id: string) => {
     setTxs((prev) => {
       const next = prev.map((t) =>
         t.id === id ? { ...t, excluded: !t.excluded } : t,
+      );
+      const collapsed = collapseWraps(matchTransfers(next).txs);
+      setTaxYears(recomputeLocalYears(collapsed));
+      return collapsed;
+    });
+  }, []);
+
+  const setExcludedMany = useCallback((ids: string[], excluded: boolean) => {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    setTxs((prev) => {
+      const next = prev.map((t) =>
+        idSet.has(t.id) ? { ...t, excluded } : t,
       );
       const collapsed = collapseWraps(matchTransfers(next).txs);
       setTaxYears(recomputeLocalYears(collapsed));
@@ -695,8 +747,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       markExchangeLinked,
       unlinkExchange,
       updateTx,
+      updateManyTxs,
       removeTx,
+      removeManyTxs,
       toggleExclude,
+      setExcludedMany,
       hydrateFromServer,
       setTaxYears,
     }),
@@ -721,8 +776,11 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       markExchangeLinked,
       unlinkExchange,
       updateTx,
+      updateManyTxs,
       removeTx,
+      removeManyTxs,
       toggleExclude,
+      setExcludedMany,
       hydrateFromServer,
     ],
   );
