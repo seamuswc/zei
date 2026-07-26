@@ -6,6 +6,10 @@ import {
   nearestDailyJpy,
 } from "@/lib/import/prices";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
+import {
+  classifyWalletLegs,
+  type WalletLeg,
+} from "@/lib/import/classify-wallet";
 
 function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -96,6 +100,7 @@ function priceFromSeries(
 export async function fetchEthereumWalletTxs(
   address: string,
   etherscanApiKey: string,
+  linkedAddresses: string[] = [],
 ): Promise<CryptoTx[]> {
   const key = etherscanApiKey.trim();
   if (!key) {
@@ -105,7 +110,7 @@ export async function fetchEthereumWalletTxs(
   }
 
   const addr = address.toLowerCase();
-  const txs: CryptoTx[] = [];
+  const legs: WalletLeg[] = [];
 
   const native = (await etherscanGet(
     {
@@ -136,50 +141,62 @@ export async function fetchEthereumWalletTxs(
   if (Array.isArray(native.result)) {
     for (const row of native.result) {
       if (row.isError === "1") continue;
-      const wei = BigInt(row.value || "0");
-      if (wei === BigInt(0)) continue;
-      const qty = Number(wei) / 1e18;
-      if (qty < 1e-8) continue;
+      const from = row.from.toLowerCase();
+      const to = (row.to || "").toLowerCase();
       const date = new Date(Number(row.timeStamp) * 1000)
         .toISOString()
         .slice(0, 10);
       const { jpy, source } = priceFromSeries(ethSeries, date);
-      const from = row.from.toLowerCase();
-      const to = row.to.toLowerCase();
-      const side = to === addr ? "buy" : from === addr ? "sell" : null;
-      if (!side) continue;
-      txs.push({
-        id: uid("eth"),
-        date,
-        asset: "ETH",
-        side,
-        quantity: qty,
-        jpyValue: Math.round(qty * jpy),
-        unitPriceJpy: jpy,
-        priceSource: source,
-        source: "wallet",
-        walletAddress: address,
-        note: `ETH · ${row.hash.slice(0, 10)}…`,
-        txHash: row.hash,
-      });
+
+      const wei = BigInt(row.value || "0");
+      // Zero-value txs are usually approve / contract calls — skip the native leg.
+      // Gas fee is still recorded when we are the sender.
+      if (wei > BigInt(0)) {
+        const qty = Number(wei) / 1e18;
+        if (qty >= 1e-8) {
+          const direction =
+            to === addr ? "in" : from === addr ? "out" : null;
+          if (direction) {
+            legs.push({
+              id: uid("eth"),
+              date,
+              asset: "ETH",
+              quantity: qty,
+              jpyValue: Math.round(qty * jpy),
+              unitPriceJpy: jpy,
+              priceSource: source,
+              direction,
+              from,
+              to,
+              txHash: row.hash,
+              walletAddress: address,
+              note: `ETH · ${row.hash.slice(0, 10)}…`,
+              knownAsset: true,
+            });
+          }
+        }
+      }
 
       if (from === addr && row.gasUsed && row.gasPrice) {
         const gasEth =
           (Number(BigInt(row.gasUsed)) * Number(BigInt(row.gasPrice))) / 1e18;
         if (gasEth > 1e-10) {
-          txs.push({
+          legs.push({
             id: uid("gas"),
             date,
             asset: "ETH",
-            side: "fee",
             quantity: gasEth,
             jpyValue: Math.round(gasEth * jpy),
             unitPriceJpy: jpy,
             priceSource: source,
-            source: "wallet",
+            direction: "out",
+            from,
+            to: to || from,
+            txHash: row.hash,
             walletAddress: address,
             note: `gas · ${row.hash.slice(0, 10)}…`,
-            txHash: row.hash,
+            knownAsset: true,
+            isFee: true,
           });
         }
       }
@@ -216,8 +233,11 @@ export async function fetchEthereumWalletTxs(
       symbol: string;
       qty: number;
       date: string;
-      side: "buy" | "sell";
+      direction: "in" | "out";
+      from: string;
+      to: string;
       coinId: string | null;
+      knownAsset: boolean;
     };
     const tokenRows: TokenRow[] = [];
     for (const row of tokens.result) {
@@ -234,10 +254,22 @@ export async function fetchEthereumWalletTxs(
         .slice(0, 10);
       const from = row.from.toLowerCase();
       const to = row.to.toLowerCase();
-      const side = to === addr ? "buy" : from === addr ? "sell" : null;
-      if (!side) continue;
+      const direction =
+        to === addr ? "in" : from === addr ? "out" : null;
+      if (!direction) continue;
       const coinId = meta?.coinId ?? coinIdForAsset(symbol);
-      tokenRows.push({ row, contract, symbol, qty, date, side, coinId });
+      tokenRows.push({
+        row,
+        contract,
+        symbol,
+        qty,
+        date,
+        direction,
+        from,
+        to,
+        coinId,
+        knownAsset: Boolean(meta),
+      });
     }
 
     const byCoin = new Map<string, string[]>();
@@ -256,25 +288,29 @@ export async function fetchEthereumWalletTxs(
     for (const r of tokenRows) {
       const series = r.coinId ? seriesByCoin.get(r.coinId) ?? null : null;
       const { jpy, source } = priceFromSeries(series, r.date);
-      txs.push({
+      legs.push({
         id: uid("erc"),
         date: r.date,
         asset: r.symbol,
-        side: r.side,
         quantity: r.qty,
         jpyValue: Math.round(r.qty * jpy),
         unitPriceJpy: jpy || undefined,
         priceSource: source,
-        source: "wallet",
+        direction: r.direction,
+        from: r.from,
+        to: r.to,
+        txHash: r.row.hash,
         walletAddress: address,
         note: `ERC-20 ${r.symbol} · ${r.row.hash.slice(0, 10)}…`,
-        txHash: r.row.hash,
         tokenContract: r.contract,
+        knownAsset: r.knownAsset || Boolean(r.coinId && jpy > 0),
       });
     }
   }
 
-  return txs.sort((a, b) => a.date.localeCompare(b.date));
+  const classified = classifyWalletLegs(legs, { linkedAddresses });
+  // collapseWraps still catches any residual buy+sell wrap pairs
+  return collapseWraps(classified).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 interface BtcTx {
@@ -324,6 +360,7 @@ export async function fetchBitcoinWalletTxs(
 
 export async function fetchLiveWalletTxs(options: {
   address: string;
+  linkedAddresses?: string[];
 }): Promise<{ address: string; chain: string; txs: CryptoTx[] }> {
   const address = options.address.trim();
   const chain = detectChain(address);
@@ -333,8 +370,12 @@ export async function fetchLiveWalletTxs(options: {
 
   if (chain === "ethereum") {
     const key = process.env.ETHERSCAN_API_KEY || "";
-    const txs = await fetchEthereumWalletTxs(address, key);
-    return { address, chain, txs: collapseWraps(txs) };
+    const txs = await fetchEthereumWalletTxs(
+      address,
+      key,
+      options.linkedAddresses ?? [],
+    );
+    return { address, chain, txs };
   }
 
   const txs = await fetchBitcoinWalletTxs(address);

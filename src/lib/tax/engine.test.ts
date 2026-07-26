@@ -314,4 +314,98 @@ const baseBuySell: CryptoTx[] = [
   }
 }
 
+// Borrow is not income; repay is not a sell
+{
+  const txs: CryptoTx[] = [
+    {
+      id: "loan",
+      date: "2025-02-01",
+      asset: "ETH",
+      side: "borrow",
+      quantity: 1,
+      jpyValue: 400_000,
+      source: "csv",
+      note: "loan proceeds",
+    },
+    {
+      id: "payback",
+      date: "2025-03-01",
+      asset: "ETH",
+      side: "repay",
+      quantity: 1,
+      jpyValue: 0,
+      source: "csv",
+      note: "principal repayment",
+    },
+  ];
+  const summary = summarizeTaxYear(txs, 2025);
+  if (summary.disposals.length !== 0) {
+    throw new Error("borrow/repay must create no disposals");
+  }
+  if (Math.round(summary.totalIncomeJpy) !== 0) {
+    throw new Error("borrow must not count as income");
+  }
+  if (Math.round(summary.totalGainJpy) !== 0) {
+    throw new Error("borrow/repay must not create taxable gain");
+  }
+  const lot = summary.endingLots.find((l) => l.asset === "ETH");
+  if (lot && lot.quantity > 1e-9) {
+    throw new Error("expected empty ETH lot after full repay");
+  }
+}
+
+// Borrow then sell uses FMV basis (no income on borrow)
+{
+  const txs: CryptoTx[] = [
+    {
+      id: "loan",
+      date: "2025-01-01",
+      asset: "ETH",
+      side: "borrow",
+      quantity: 1,
+      jpyValue: 400_000,
+      source: "csv",
+    },
+    {
+      id: "sell",
+      date: "2025-02-01",
+      asset: "ETH",
+      side: "sell",
+      quantity: 1,
+      jpyValue: 450_000,
+      source: "csv",
+    },
+  ];
+  const summary = summarizeTaxYear(txs, 2025);
+  if (Math.round(summary.totalIncomeJpy) !== 0) {
+    throw new Error("borrow still must not be income when later sold");
+  }
+  if (Math.round(summary.totalGainJpy) !== 50_000) {
+    throw new Error(
+      `sell after borrow should gain 50k (450k-400k FMV basis), got ${summary.totalGainJpy}`,
+    );
+  }
+}
+
+// CSV aliases: interest→income, loan→borrow, repay→repay
+{
+  const csv = `date,asset,side,quantity,jpy_value,fee_jpy,note
+2025-01-01,ETH,interest,0.1,10000,0,lending interest
+2025-02-01,ETH,loan,1,400000,0,borrowed
+2025-03-01,ETH,repayment,1,0,0,paid back
+`;
+  const { txs, errors } = parseSpreadsheetCsv(csv);
+  if (errors.length) throw new Error(errors.join("; "));
+  if (txs[0]?.side !== "income") throw new Error("interest should map to income");
+  if (txs[1]?.side !== "borrow") throw new Error("loan should map to borrow");
+  if (txs[2]?.side !== "repay") throw new Error("repayment should map to repay");
+  const summary = summarizeTaxYear(txs, 2025);
+  if (Math.round(summary.totalIncomeJpy) !== 10_000) {
+    throw new Error("only interest should be income");
+  }
+  if (summary.disposals.filter((d) => d.kind === "sell").length !== 0) {
+    throw new Error("repay must not be a sell");
+  }
+}
+
 console.log("all tax/import checks ok");

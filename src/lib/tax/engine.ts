@@ -20,6 +20,9 @@ interface CarryLot {
  * - Sells realize gain = (proceeds − fees) − (qty × avg cost).
  * - Income/airdrop/staking: taxable at FMV on receipt; basis becomes FMV.
  * - Transfers: no realization; cost basis carries via match + carry queue.
+ * - Borrow: loan proceeds are NOT income; add qty at FMV/override (no disposal).
+ * - Repay: returning loan principal is NOT a sell; reduce qty/basis with no gain.
+ * - Interest received → use income; interest paid in-asset → use fee.
  * - Fees as standalone side reduce basis / realize if paid in-asset.
  */
 export function computeMovingAverage(txs: CryptoTx[]): {
@@ -31,7 +34,14 @@ export function computeMovingAverage(txs: CryptoTx[]): {
     const d = a.date.localeCompare(b.date);
     if (d !== 0) return d;
     const rank = (s: CryptoTx["side"]) => {
-      if (s === "transfer_in" || s === "buy" || s === "income" || s === "wrap" || s === "bridge")
+      if (
+        s === "transfer_in" ||
+        s === "buy" ||
+        s === "income" ||
+        s === "wrap" ||
+        s === "bridge" ||
+        s === "borrow"
+      )
         return 0;
       if (s === "fee") return 2;
       return 1;
@@ -142,6 +152,19 @@ export function computeMovingAverage(txs: CryptoTx[]): {
       continue;
     }
 
+    if (tx.side === "borrow") {
+      // Loan proceeds: inventory in at FMV (or override). Not taxable income.
+      const cost =
+        (tx.costBasisOverrideJpy != null ? tx.costBasisOverrideJpy : tx.jpyValue) +
+        fee;
+      const newQty = lot.quantity + qty;
+      const newCost = lot.totalCostJpy + cost;
+      lot.quantity = newQty;
+      lot.totalCostJpy = newCost;
+      lot.avgCostJpy = newQty > 0 ? newCost / newQty : 0;
+      continue;
+    }
+
     if (tx.side === "transfer_out") {
       const moveQty = Math.min(qty, lot.quantity || qty);
       const costBasis = lot.avgCostJpy * moveQty;
@@ -152,6 +175,20 @@ export function computeMovingAverage(txs: CryptoTx[]): {
         lot.avgCostJpy = 0;
         lot.totalCostJpy = 0;
       }
+      continue;
+    }
+
+    if (tx.side === "repay") {
+      // Loan principal return: remove qty/basis with no taxable disposal.
+      // (Unlike transfer_out, do not push carry — repay is not an own-wallet hop.)
+      const repayQty = Math.min(qty, lot.quantity || qty);
+      const costBasis =
+        tx.costBasisOverrideJpy != null
+          ? tx.costBasisOverrideJpy
+          : lot.avgCostJpy * repayQty;
+      lot.quantity = Math.max(0, lot.quantity - repayQty);
+      lot.totalCostJpy = Math.max(0, lot.totalCostJpy - costBasis);
+      lot.avgCostJpy = lot.quantity > 0 ? lot.totalCostJpy / lot.quantity : 0;
       continue;
     }
 

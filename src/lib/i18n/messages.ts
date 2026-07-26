@@ -53,7 +53,7 @@ export const messages = {
     csv_kicker: "01 · スプレッドシート",
     csv_title: "CSV / Excelをアップロード",
     csv_desc:
-      "取引所のエクスポートや手記帳に対応。APIキーが使えないときはこちら。buy/sell、transfer、income、fee、wrap、bridge、trade をサポート。",
+      "取引所のエクスポートや手記帳に対応。APIキーが使えないときはこちら。buy/sell、transfer、income、fee、wrap、bridge、borrow/repay（借入・返済・非所得）、trade をサポート。",
     csv_drop: "CSVをドロップ",
     csv_drop_sub: "またはクリックして選択 · .csv / .txt",
     csv_sample: "サンプルCSVを読込",
@@ -71,9 +71,10 @@ export const messages = {
     wallet_sync_wait:
       "同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
     wallet_hint:
-      "アドレスを入れるだけです。Ethereumの照会はサーバー側で行います。APIキーは不要です。1件終わってから次のアドレスを追加できます。",
+      "アドレスを入れるだけです。Ethereumの照会はサーバー側で行います。APIキーは不要です。1件終わってから次のアドレスを追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
     wallet_linked: "接続済み: {address}",
-    wallet_sync_ok: "同期完了 · {chain} · {n}件（税額計算に反映）",
+    wallet_sync_ok:
+      "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
     unlink: "解除",
 
     exchange_kicker: "03 · 取引所 · 読み取り専用API",
@@ -184,7 +185,7 @@ export const messages = {
     review_kicker: "確認 · すべて編集可",
     review_title: "価格・数量・取得価額を修正",
     review_sub:
-      "どの欄も変更できます。「円」は価額／売却額。「取得価額上書き」は任意です。買いでは取得原価、売り／手数料では移動平均の代わりに使います。空欄ならエンジン計算。",
+      "どの欄も変更できます（DeFiの受取・借入・返済の区分も含む）。利息・ステーキング等は「受取」、借入は「借入」、返済は「返済」（所得・売却ではない）。「円」は価額／売却額。「取得価額上書き」は任意です。",
     th_side: "区分",
     th_jpy: "円（価格）",
     th_fee: "手数料円",
@@ -309,6 +310,8 @@ export const messages = {
     side_fee: "手数料",
     side_wrap: "ラップ",
     side_bridge: "ブリッジ",
+    side_borrow: "借入",
+    side_repay: "返済",
     kind_sell: "売却",
     kind_income: "受取",
     kind_fee: "手数料",
@@ -370,7 +373,7 @@ export const messages = {
     csv_kicker: "01 · Spreadsheet",
     csv_title: "Upload CSV / Excel export",
     csv_desc:
-      "Exchange exports or manual books. Use this if you prefer not to use an API key. Supports buy/sell, transfer, income, fee, wrap, bridge, trade.",
+      "Exchange exports or manual books. Use this if you prefer not to use an API key. Supports buy/sell, transfer, income, fee, wrap, bridge, borrow/repay (loans — not income), trade.",
     csv_drop: "Drop CSV here",
     csv_drop_sub: "or click to browse · .csv / .txt",
     csv_sample: "Load sample CSV",
@@ -388,9 +391,10 @@ export const messages = {
     wallet_sync_wait:
       "Sync in progress — please wait. You can’t add another address until this finishes.",
     wallet_hint:
-      "Paste an address only. Ethereum lookups use the server — no API key needed. Add another address after this sync completes.",
+      "Paste an address only. Ethereum lookups use the server — no API key needed. Add another address after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
     wallet_linked: "Linked: {address}",
-    wallet_sync_ok: "Synced · {chain} · {n} rows (added to tax calc)",
+    wallet_sync_ok:
+      "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
     unlink: "Unlink",
 
     exchange_kicker: "03 · Exchange · read-only API",
@@ -503,7 +507,7 @@ export const messages = {
     review_kicker: "Review · fully editable",
     review_title: "Edit prices, quantities, and cost basis",
     review_sub:
-      "Change any field. JPY is the price/proceeds total. Cost override is optional — on buys it sets acquisition cost; on sells/fees it sets 取得価額 instead of 移動平均. Leave blank to use the engine.",
+      "Change any field (including DeFi sides). Interest/staking → income; loan proceeds → borrow; loan repayment → repay (neither is taxable income/sell). JPY is price/proceeds. Cost override is optional.",
     th_side: "Side",
     th_jpy: "JPY (price)",
     th_fee: "Fee JPY",
@@ -628,6 +632,8 @@ export const messages = {
     side_fee: "fee",
     side_wrap: "wrap",
     side_bridge: "bridge",
+    side_borrow: "borrow",
+    side_repay: "repay",
     kind_sell: "sell",
     kind_income: "income",
     kind_fee: "fee",

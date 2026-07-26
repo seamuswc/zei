@@ -15,6 +15,8 @@ const SIDES: TxSide[] = [
   "fee",
   "wrap",
   "bridge",
+  "borrow",
+  "repay",
 ];
 
 export function ReviewLedger() {

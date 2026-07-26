@@ -14,6 +14,8 @@ const SIDES = new Set<TxSide>([
   "fee",
   "wrap",
   "bridge",
+  "borrow",
+  "repay",
 ]);
 
 /**
@@ -21,7 +23,8 @@ const SIDES = new Set<TxSide>([
  * 1) date,asset,side,quantity,jpy_value[,fee_jpy][,note]
  * 2) trade rows: date,asset,trade,qty,jpy,fee,note,counter_asset,counter_qty
  *    side may also be "trade" / "swap"
- * 3) income/airdrop/staking via side=income
+ * 3) income/airdrop/staking/interest via side=income
+ * 4) loan/borrow → borrow (not income); repay/repayment → repay (not sell)
  */
 export function parseSpreadsheetCsv(text: string): {
   txs: CryptoTx[];
@@ -95,9 +98,18 @@ export function parseSpreadsheetCsv(text: string): {
 
     const date = normalizeDate(dateRaw);
     const asset = assetRaw.trim().toUpperCase();
-    let side = sideRaw.trim().toLowerCase().replace("-", "_");
-    if (side === "airdrop" || side === "staking" || side === "reward") {
+    let side = sideRaw.trim().toLowerCase().replace(/[-\s]+/g, "_");
+    if (
+      side === "airdrop" ||
+      side === "staking" ||
+      side === "reward" ||
+      side === "interest"
+    ) {
       side = "income";
+    } else if (side === "loan" || side === "loan_in" || side === "borrowed") {
+      side = "borrow";
+    } else if (side === "repayment" || side === "loan_repay" || side === "loan_out") {
+      side = "repay";
     }
     const quantity = Number(String(qtyRaw).replace(/,/g, ""));
     const jpyValue = Number(String(jpyRaw).replace(/,/g, ""));
@@ -233,6 +245,8 @@ export const SAMPLE_CSV = `date,asset,side,quantity,jpy_value,fee_jpy,note,count
 2025-03-02,ETH,buy,1.2,480000,300,Coincheck,,
 2025-04-10,BTC,transfer_out,0.01,0,0,to wallet,,
 2025-04-10,BTC,transfer_in,0.01,0,0,from exchange,,
+2025-05-15,ETH,borrow,0.5,200000,0,DeFi loan proceeds (not income),,
+2025-05-20,ETH,repay,0.5,0,0,loan principal repayment (not sell),,
 2025-06-18,BTC,sell,0.02,420000,400,Take profit,,
 2025-07-01,ETH,trade,0.2,90000,200,swap to SOL,SOL,3
 2025-09-01,ETH,sell,0.5,220000,200,Partial exit,,

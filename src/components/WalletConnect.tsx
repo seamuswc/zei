@@ -22,7 +22,7 @@ async function readJsonSafe(res: Response): Promise<Record<string, unknown>> {
 }
 
 export function WalletConnect() {
-  const { addTxs, markWalletLinked } = usePortfolio();
+  const { addTxs, markWalletLinked, linkedWallets } = usePortfolio();
   const { t } = useI18n();
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -40,7 +40,11 @@ export function WalletConnect() {
       const res = await fetch("/api/wallet/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr }),
+        body: JSON.stringify({
+          address: addr,
+          // Include already-linked wallets so counterparty hops classify as transfers
+          linkedAddresses: linkedWallets,
+        }),
       });
       const data = await readJsonSafe(res);
       if (!res.ok) {

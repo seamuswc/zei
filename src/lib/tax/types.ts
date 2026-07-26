@@ -6,7 +6,9 @@ export type TxSide =
   | "income"
   | "fee"
   | "wrap"
-  | "bridge";
+  | "bridge"
+  | "borrow" // loan proceeds — not income
+  | "repay"; // loan principal return — not a taxable disposal
 
 export type TxSource = "csv" | "wallet" | "exchange";
 
@@ -48,8 +50,8 @@ export interface CryptoTx {
   tokenContract?: string;
   /**
    * Optional manual override (JPY total).
-   * - On buy/income/transfer_in: used as acquisition cost instead of jpyValue.
-   * - On sell/fee: used as 取得価額 instead of 移動平均.
+   * - On buy/income/transfer_in/borrow: used as acquisition cost instead of jpyValue.
+   * - On sell/fee/repay: used as 取得価額 instead of 移動平均.
    */
   costBasisOverrideJpy?: number;
 }
