@@ -250,14 +250,14 @@ export function allEtherscanChainIds(): number[] {
   return ETHERSCAN_CHAINS.map((c) => c.id);
 }
 
-/** Default UI selection: Popular preset. */
+/** Default sync target: every Etherscan V2 mainnet (same address across EVM). */
 export function defaultWalletChainIds(): number[] {
-  return popularEtherscanChains().map((c) => c.id);
+  return allEtherscanChainIds();
 }
 
 /**
  * Normalize client/API chain selection.
- * Empty / missing → popular defaults. Unknown ids dropped.
+ * Empty / missing → all Etherscan V2 mainnets. Unknown ids dropped.
  */
 export function resolveWalletChainIds(input?: number[] | null): number[] {
   if (!input || input.length === 0) return defaultWalletChainIds();

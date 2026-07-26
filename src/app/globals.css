@@ -1539,8 +1539,24 @@ th {
   word-break: break-word;
 }
 
+.wallet-chains-advanced {
+  margin: 0.35rem 0 0;
+}
+
+.wallet-chains-advanced > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--jade-deep);
+  text-decoration: underline;
+  list-style: none;
+}
+
+.wallet-chains-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
 .wallet-chains {
-  margin: 0;
+  margin: 0.55rem 0 0;
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--line);
   display: grid;
@@ -1552,23 +1568,6 @@ th {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-soft);
-}
-
-.wallet-chains__presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.wallet-chains__presets .btn.is-active {
-  border-color: var(--jade);
-  color: var(--jade-deep);
-}
-
-.wallet-chains__group-label {
-  margin: 0;
-  font-size: 0.78rem;
   color: var(--ink-soft);
 }
 
@@ -1595,18 +1594,6 @@ th {
   display: block;
   color: var(--ink-soft);
   font-size: 0.72rem;
-}
-
-.wallet-chains__more-toggle {
-  justify-self: start;
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 0.85rem;
-  color: var(--jade-deep);
-  text-decoration: underline;
-  cursor: pointer;
 }
 
 .wallet-chains__selected {

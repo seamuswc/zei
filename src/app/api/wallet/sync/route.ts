@@ -36,6 +36,7 @@ function ensErrorKey(code: EnsResolveError["code"]): ApiMsgKey {
   }
 }
 
+/** Default (no body fields) and `allChains: true` → every Etherscan V2 mainnet. */
 function parseChainIds(body: {
   chainId?: unknown;
   chainIds?: unknown;
@@ -53,7 +54,8 @@ function parseChainIds(body: {
       .filter((n) => Number.isFinite(n));
     return resolveWalletChainIds(ids);
   }
-  return resolveWalletChainIds(null);
+  // Same address on all EVM chains — sync everything unless limited.
+  return allEtherscanChainIds();
 }
 
 export async function POST(req: Request) {

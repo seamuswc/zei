@@ -523,13 +523,14 @@ export async function fetchEthereumWalletTxs(
 export async function fetchLiveWalletTxs(options: {
   address: string;
   linkedAddresses?: string[];
-  /** Etherscan V2 chain ids. Empty/omitted → Popular defaults. */
+  /** Etherscan V2 chain ids. Empty/omitted → all mainnets. */
   chainIds?: number[];
 }): Promise<{
   address: string;
   ens?: string;
   chain: string;
   chainLabel: string;
+  /** Chains that returned at least one tx (for linked-wallet display). */
   chainIds: number[];
   chainsSynced: Array<{
     chainId: number;
@@ -597,8 +598,8 @@ export async function fetchLiveWalletTxs(options: {
     .flatMap((r) => r.txs)
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const syncedIds = perChain
-    .filter((r) => !r.error)
+  const activityIds = perChain
+    .filter((r) => !r.error && r.txs.length > 0)
     .map((r) => r.chainId);
 
   const anyTruncated = perChain.some((r) => r.truncated);
@@ -614,8 +615,8 @@ export async function fetchLiveWalletTxs(options: {
     address,
     ens: resolved.ens,
     chain: "evm",
-    chainLabel: chainLabelForIds(syncedIds.length ? syncedIds : chainIds),
-    chainIds: syncedIds.length ? syncedIds : chainIds,
+    chainLabel: chainLabelForIds(activityIds.length ? activityIds : chainIds),
+    chainIds: activityIds,
     chainsSynced: perChain.map((r) => ({
       chainId: r.chainId,
       name: r.chainName,

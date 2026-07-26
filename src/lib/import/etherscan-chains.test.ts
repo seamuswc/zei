@@ -56,17 +56,25 @@ import {
 
 {
   const def = defaultWalletChainIds();
-  if (!def.includes(1) || !def.includes(8453)) {
-    throw new Error("defaults should include Ethereum + Base");
-  }
   const all = allEtherscanChainIds();
   if (all.length !== ETHERSCAN_CHAINS.length) {
     throw new Error("allEtherscanChainIds length mismatch");
   }
+  if (def.join(",") !== all.join(",")) {
+    throw new Error("defaults should be all Etherscan V2 mainnets");
+  }
+  if (!def.includes(1) || !def.includes(8453)) {
+    throw new Error("defaults should include Ethereum + Base");
+  }
 
   const resolvedEmpty = resolveWalletChainIds([]);
-  if (resolvedEmpty.join(",") !== def.join(",")) {
-    throw new Error("empty chainIds should fall back to popular defaults");
+  if (resolvedEmpty.join(",") !== all.join(",")) {
+    throw new Error("empty chainIds should fall back to all chains");
+  }
+
+  const resolvedNull = resolveWalletChainIds(null);
+  if (resolvedNull.join(",") !== all.join(",")) {
+    throw new Error("null chainIds should fall back to all chains");
   }
 
   const resolved = resolveWalletChainIds([1, 1, 99999, 8453]);

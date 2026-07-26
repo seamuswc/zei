@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import {
   isEnsName,
@@ -12,10 +12,7 @@ import {
   ETHERSCAN_CHAINS,
   allEtherscanChainIds,
   chainLabelForIds,
-  defaultWalletChainIds,
   getEtherscanChain,
-  moreEtherscanChains,
-  popularEtherscanChains,
 } from "@/lib/import/etherscan-chains";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
@@ -62,16 +59,11 @@ export function WalletConnect() {
   const [resolvedLine, setResolvedLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Advanced: when true, sync only checked chains; otherwise all Etherscan V2. */
+  const [limitChains, setLimitChains] = useState(false);
   const [selectedChains, setSelectedChains] = useState<number[]>(() =>
-    defaultWalletChainIds(),
+    allEtherscanChainIds(),
   );
-  const [showMore, setShowMore] = useState(false);
-
-  const popular = useMemo(() => popularEtherscanChains(), []);
-  const more = useMemo(() => moreEtherscanChains(), []);
-  const allSelected =
-    selectedChains.length === ETHERSCAN_CHAINS.length &&
-    allEtherscanChainIds().every((id) => selectedChains.includes(id));
 
   async function onConnect() {
     if (busy) return;
@@ -86,7 +78,7 @@ export function WalletConnect() {
       return;
     }
 
-    if (selectedChains.length === 0) {
+    if (limitChains && selectedChains.length === 0) {
       setError(t("wallet_chains_required"));
       return;
     }
@@ -101,7 +93,9 @@ export function WalletConnect() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: addr,
-          chainIds: selectedChains,
+          ...(limitChains
+            ? { chainIds: selectedChains }
+            : { allChains: true }),
           // Include already-linked wallets so counterparty hops classify as transfers
           linkedAddresses: linkedWallets,
         }),
@@ -121,7 +115,7 @@ export function WalletConnect() {
         ? data.chainIds
             .map((x) => Number(x))
             .filter((n) => Number.isFinite(n))
-        : selectedChains;
+        : [];
       addTxs(txs);
       markWalletLinked(syncedAddress, ens, syncedChainIds);
       if (ens) {
@@ -192,91 +186,15 @@ export function WalletConnect() {
         />
       </label>
 
-      <fieldset className="wallet-chains" disabled={busy}>
-        <legend>{t("wallet_chains_label")}</legend>
-        <div className="wallet-chains__presets">
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setSelectedChains(defaultWalletChainIds())}
-          >
-            {t("wallet_chains_popular")}
-          </button>
-          <button
-            type="button"
-            className={`btn btn--ghost btn--sm${allSelected ? " is-active" : ""}`}
-            onClick={() =>
-              setSelectedChains(
-                allSelected ? defaultWalletChainIds() : allEtherscanChainIds(),
-              )
-            }
-          >
-            {t("wallet_chains_all", { n: ETHERSCAN_CHAINS.length })}
-          </button>
-        </div>
-
-        <p className="wallet-chains__group-label">{t("wallet_chains_popular")}</p>
-        <div className="wallet-chains__grid">
-          {popular.map((c) => (
-            <label key={c.id} className="wallet-chains__opt">
-              <input
-                type="checkbox"
-                checked={selectedChains.includes(c.id)}
-                onChange={() =>
-                  setSelectedChains((prev) => toggleId(prev, c.id))
-                }
-              />
-              <span>
-                {c.name}
-                <small>{c.nativeSymbol}</small>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          className="wallet-chains__more-toggle"
-          onClick={() => setShowMore((v) => !v)}
-        >
-          {showMore
-            ? t("wallet_chains_more_hide")
-            : t("wallet_chains_more_show", { n: more.length })}
-        </button>
-
-        {showMore && (
-          <>
-            <p className="wallet-chains__group-label">{t("wallet_chains_more")}</p>
-            <div className="wallet-chains__grid">
-              {more.map((c) => (
-                <label key={c.id} className="wallet-chains__opt">
-                  <input
-                    type="checkbox"
-                    checked={selectedChains.includes(c.id)}
-                    onChange={() =>
-                      setSelectedChains((prev) => toggleId(prev, c.id))
-                    }
-                  />
-                  <span>
-                    {c.name}
-                    <small>{c.nativeSymbol}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </>
-        )}
-
-        <p className="field-hint wallet-chains__selected">
-          {t("wallet_chains_selected", { n: selectedChains.length })}
-        </p>
-      </fieldset>
-
       <div className="import-actions">
         <button
           type="button"
           className="btn btn--solid"
-          disabled={busy || !address.trim() || selectedChains.length === 0}
+          disabled={
+            busy ||
+            !address.trim() ||
+            (limitChains && selectedChains.length === 0)
+          }
           onClick={() => void onConnect()}
         >
           {busy ? (
@@ -289,6 +207,41 @@ export function WalletConnect() {
           )}
         </button>
       </div>
+
+      <details
+        className="wallet-chains-advanced"
+        onToggle={(e) => {
+          const open = e.currentTarget.open;
+          setLimitChains(open);
+          if (open) setSelectedChains(allEtherscanChainIds());
+        }}
+      >
+        <summary>{t("wallet_chains_limit")}</summary>
+        <fieldset className="wallet-chains" disabled={busy}>
+          <legend>{t("wallet_chains_label")}</legend>
+          <p className="field-hint">{t("wallet_chains_limit_hint")}</p>
+          <div className="wallet-chains__grid">
+            {ETHERSCAN_CHAINS.map((c) => (
+              <label key={c.id} className="wallet-chains__opt">
+                <input
+                  type="checkbox"
+                  checked={selectedChains.includes(c.id)}
+                  onChange={() =>
+                    setSelectedChains((prev) => toggleId(prev, c.id))
+                  }
+                />
+                <span>
+                  {c.name}
+                  <small>{c.nativeSymbol}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="field-hint wallet-chains__selected">
+            {t("wallet_chains_selected", { n: selectedChains.length })}
+          </p>
+        </fieldset>
+      </details>
 
       {/* Always under the sync form whenever anything is linked (incl. after refresh). */}
       {linkedWallets.length > 0 && (

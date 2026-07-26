@@ -18,7 +18,7 @@ Accounts (email verify) autosave the ledger to the cloud; Pro (USDC) unlocks the
 | Method | What it does |
 |--------|----------------|
 | **CSV export** | Upload exchange or manual books (`.csv` / `.txt`) |
-| **Wallet** | Live **EVM chains via Etherscan API V2** (multi-select: Popular or all supported mainnets) — address or ENS (+ native + ERC-20 + internal transfers) — priced to JPY (Asia/Tokyo dates). ENS resolves on Ethereum mainnet only. |
+| **Wallet** | Live **all Etherscan API V2 EVM mainnets** for one address (same EVM address across chains; optional advanced chain limit) — address or ENS (+ native + ERC-20 + internal transfers) — priced to JPY (Asia/Tokyo dates). ENS resolves on Ethereum mainnet only. |
 | **Exchange API** | Read-only keys — **Japan:** bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif · **Overseas:** Binance, Bybit, OKX, Kraken, KuCoin, Bitget, Gate.io, MEXC, Crypto.com, Coinbase Exchange, HTX |
 
 **Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin / Bitget / Coinbase also need the API **passphrase**. Coinbase uses **Exchange** HMAC keys only (**Advanced Trade JWT/CDP is not supported** — use CSV). Overseas USDT/USD fills are converted to JPY (CoinGecko).
