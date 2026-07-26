@@ -7,6 +7,12 @@ import {
   fetchKrakenTrades,
   fetchKucoinTrades,
   fetchBinanceJpTradesShared,
+  fetchBitgetTrades,
+  fetchGateioTrades,
+  fetchMexcTrades,
+  fetchCryptocomTrades,
+  fetchCoinbaseTrades,
+  fetchHtxTrades,
 } from "@/lib/import/exchange-overseas";
 
 function uid(prefix: string): string {
@@ -575,7 +581,13 @@ export type ExchangePermKey =
   | "exchange_perm_bybit"
   | "exchange_perm_okx"
   | "exchange_perm_kraken"
-  | "exchange_perm_kucoin";
+  | "exchange_perm_kucoin"
+  | "exchange_perm_bitget"
+  | "exchange_perm_gateio"
+  | "exchange_perm_mexc"
+  | "exchange_perm_cryptocom"
+  | "exchange_perm_coinbase"
+  | "exchange_perm_htx";
 
 export type ExchangeRegion = "Japan" | "Overseas";
 
@@ -586,7 +598,11 @@ export interface ExchangeDef {
   live: boolean;
   permKey: ExchangePermKey;
   docsUrl: string;
-  historyNoteKey?: "exchange_hist_gmo" | "exchange_hist_overseas";
+  historyNoteKey?:
+    | "exchange_hist_gmo"
+    | "exchange_hist_overseas"
+    | "exchange_hist_mexc"
+    | "exchange_hist_coinbase";
   needsPassphrase?: boolean;
 }
 
@@ -687,6 +703,62 @@ export const EXCHANGES: ExchangeDef[] = [
     historyNoteKey: "exchange_hist_overseas",
     needsPassphrase: true,
   },
+  {
+    id: "bitget",
+    name: "Bitget",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_bitget",
+    docsUrl: "https://www.bitget.com/api-doc/common/intro",
+    historyNoteKey: "exchange_hist_overseas",
+    needsPassphrase: true,
+  },
+  {
+    id: "gateio",
+    name: "Gate.io",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_gateio",
+    docsUrl: "https://www.gate.io/docs/developers/apiv4/",
+    historyNoteKey: "exchange_hist_overseas",
+  },
+  {
+    id: "mexc",
+    name: "MEXC",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_mexc",
+    docsUrl: "https://www.mexc.com/api-docs/spot-v3/introduction",
+    historyNoteKey: "exchange_hist_mexc",
+  },
+  {
+    id: "cryptocom",
+    name: "Crypto.com",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_cryptocom",
+    docsUrl: "https://exchange-docs.crypto.com/exchange/v1/rest-ws/index.html",
+    historyNoteKey: "exchange_hist_overseas",
+  },
+  {
+    id: "coinbase",
+    name: "Coinbase",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_coinbase",
+    docsUrl: "https://docs.cdp.coinbase.com/exchange/docs/welcome",
+    historyNoteKey: "exchange_hist_coinbase",
+    needsPassphrase: true,
+  },
+  {
+    id: "htx",
+    name: "HTX",
+    region: "Overseas",
+    live: true,
+    permKey: "exchange_perm_htx",
+    docsUrl: "https://www.htx.com/en-us/opend/newApiPages/",
+    historyNoteKey: "exchange_hist_overseas",
+  },
 ];
 
 export async function fetchExchangeLive(
@@ -727,6 +799,22 @@ export async function fetchExchangeLive(
       return {
         txs: await fetchKucoinTrades(apiKey, apiSecret, passphrase || ""),
       };
+    case "bitget":
+      return {
+        txs: await fetchBitgetTrades(apiKey, apiSecret, passphrase || ""),
+      };
+    case "gateio":
+      return { txs: await fetchGateioTrades(apiKey, apiSecret) };
+    case "mexc":
+      return { txs: await fetchMexcTrades(apiKey, apiSecret) };
+    case "cryptocom":
+      return { txs: await fetchCryptocomTrades(apiKey, apiSecret) };
+    case "coinbase":
+      return {
+        txs: await fetchCoinbaseTrades(apiKey, apiSecret, passphrase || ""),
+      };
+    case "htx":
+      return { txs: await fetchHtxTrades(apiKey, apiSecret) };
     default:
       throw new Error("Unsupported exchange for live sync.");
   }

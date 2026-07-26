@@ -38,6 +38,16 @@ const EXCHANGE_LINK_IDS: Record<string, string> = {
   okx: "okx",
   kraken: "kraken",
   kucoin: "kucoin",
+  bitget: "bitget",
+  gateio: "gateio",
+  "gate.io": "gateio",
+  gate: "gateio",
+  mexc: "mexc",
+  cryptocom: "cryptocom",
+  "crypto.com": "cryptocom",
+  coinbase: "coinbase",
+  htx: "htx",
+  huobi: "htx",
 };
 
 function resolveExchangeLinkId(raw: string): string | null {

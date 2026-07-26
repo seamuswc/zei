@@ -19,9 +19,9 @@ Accounts (email verify) autosave the ledger to the cloud; Pro (USDC) unlocks the
 |--------|----------------|
 | **CSV / Excel export** | Upload exchange or manual books |
 | **Wallet** | Live ETH / EVM address or ENS (+ ERC-20) via Etherscan — priced to JPY |
-| **Exchange API** | Read-only keys — **Japan:** bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif · **Overseas:** Binance, Bybit, OKX, Kraken, KuCoin |
+| **Exchange API** | Read-only keys — **Japan:** bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif · **Overseas:** Binance, Bybit, OKX, Kraken, KuCoin, Bitget, Gate.io, MEXC, Crypto.com, Coinbase Exchange, HTX |
 
-**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin also need the API **passphrase**. Overseas USDT/USD fills are converted to JPY (CoinGecko).
+**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin / Bitget / Coinbase also need the API **passphrase**. Coinbase uses **Exchange** HMAC keys (not Advanced Trade JWT/CDP). Overseas USDT/USD fills are converted to JPY (CoinGecko).
 
 ### 2. Pricing (waterfall)
 

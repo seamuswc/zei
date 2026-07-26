@@ -81,7 +81,7 @@ export const messages = {
     exchange_label: "取引所",
     exchange_key: "APIキー（読み取り専用）",
     exchange_secret: "APIシークレット",
-    exchange_passphrase: "APIパスフレーズ（OKX / KuCoin）",
+    exchange_passphrase: "APIパスフレーズ（OKX / KuCoin / Bitget / Coinbase）",
     exchange_connect: "読み取り同期",
     exchange_syncing: "同期中…",
     exchange_linked: "連携済み取引所",
@@ -109,10 +109,26 @@ export const messages = {
       "Kraken: Query / Query Funds のみ。Orders / Withdraw は付けない。",
     exchange_perm_kucoin:
       "KuCoin: General / Spot の読み取りのみ + パスフレーズ。Trade / Transfer はOFF。",
+    exchange_perm_bitget:
+      "Bitget: Read-only + パスフレーズ。Trade / Withdraw はOFF。スポット約定を円換算します。",
+    exchange_perm_gateio:
+      "Gate.io: Spot 読み取りのみ。Trade / Withdraw はOFF。USDT建てを円換算します。",
+    exchange_perm_mexc:
+      "MEXC: Spot Account Read のみ。Trade / Withdraw はOFF。APIは直近約1か月分です。",
+    exchange_perm_cryptocom:
+      "Crypto.com Exchange: 読み取り専用キー。Trade / Withdraw はOFF。スポットのみ取り込みます。",
+    exchange_perm_coinbase:
+      "Coinbase Exchange: View / trade history + パスフレーズ。Advanced Trade（JWT/CDP）キーは非対応。",
+    exchange_perm_htx:
+      "HTX: 読み取り専用。注文・出金はOFF。USDT建てスポット約定を円換算します。",
     exchange_hist_gmo:
       "注意: GMOのAPIは直近の約定が中心です。年間フル履歴はCSVも併用してください。",
     exchange_hist_overseas:
       "注意: 海外取引所はUSDT等をCoinGeckoで円換算します。年間フル履歴はCSV併用を推奨。",
+    exchange_hist_mexc:
+      "注意: MEXCのAPIは直近約1か月の約定のみ。年間フル履歴はCSVを使ってください。",
+    exchange_hist_coinbase:
+      "注意: Coinbase Exchange APIキーが必要です（Advanced TradeのJWT/CDPキーは使えません）。",
 
     income_kicker: "暗号資産のみ",
     income_title: "任意：他の所得（税率の目安用）",
@@ -404,7 +420,7 @@ export const messages = {
     exchange_label: "Exchange",
     exchange_key: "API key (read-only)",
     exchange_secret: "API secret",
-    exchange_passphrase: "API passphrase (OKX / KuCoin)",
+    exchange_passphrase: "API passphrase (OKX / KuCoin / Bitget / Coinbase)",
     exchange_connect: "Sync read-only",
     exchange_syncing: "Syncing…",
     exchange_linked: "Linked exchanges",
@@ -434,10 +450,26 @@ export const messages = {
       "Kraken: Query / Query Funds only. No Orders or Withdraw.",
     exchange_perm_kucoin:
       "KuCoin: General/Spot read only + passphrase. No Trade or Transfer.",
+    exchange_perm_bitget:
+      "Bitget: Read-only + passphrase. No Trade or Withdraw. Spot fills converted to JPY.",
+    exchange_perm_gateio:
+      "Gate.io: Spot read only. No Trade or Withdraw. USDT fills converted to JPY.",
+    exchange_perm_mexc:
+      "MEXC: Spot Account Read only. No Trade or Withdraw. API covers ~1 month of history.",
+    exchange_perm_cryptocom:
+      "Crypto.com Exchange: read-only key. No Trade or Withdraw. Spot fills only.",
+    exchange_perm_coinbase:
+      "Coinbase Exchange: View / trade history + passphrase. Advanced Trade JWT/CDP keys are not supported.",
+    exchange_perm_htx:
+      "HTX: read-only. No order or withdraw. USDT spot fills converted to JPY.",
     exchange_hist_gmo:
       "Note: GMO’s API mainly covers recent fills. Use CSV for a full tax year.",
     exchange_hist_overseas:
       "Note: Overseas venues convert USDT (etc.) to JPY via CoinGecko. Prefer CSV for a full tax year.",
+    exchange_hist_mexc:
+      "Note: MEXC’s API only covers about the last month. Use CSV for a full tax year.",
+    exchange_hist_coinbase:
+      "Note: Coinbase Exchange API keys required (Advanced Trade JWT/CDP keys will not work).",
 
     income_kicker: "Crypto only",
     income_title: "Optional: other income for a rough rate check",
