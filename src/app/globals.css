@@ -1521,6 +1521,98 @@ th {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+.link-list__row--stack {
+  align-items: flex-start;
+}
+
+.link-list__meta {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.link-list__chains {
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.wallet-chains {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.wallet-chains legend {
+  padding: 0 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.wallet-chains__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.wallet-chains__presets .btn.is-active {
+  border-color: var(--jade);
+  color: var(--jade-deep);
+}
+
+.wallet-chains__group-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.wallet-chains__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.35rem 0.6rem;
+}
+
+.wallet-chains__opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.wallet-chains__opt input {
+  margin-top: 0.15rem;
+}
+
+.wallet-chains__opt small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.wallet-chains__more-toggle {
+  justify-self: start;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--jade-deep);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.wallet-chains__selected {
+  margin: 0;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

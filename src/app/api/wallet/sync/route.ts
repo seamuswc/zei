@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { fetchLiveWalletTxs } from "@/lib/import/wallet-live";
+import {
+  allEtherscanChainIds,
+  resolveWalletChainIds,
+} from "@/lib/import/etherscan-chains";
 import { EnsResolveError } from "@/lib/ens";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimit, pruneRateLimits } from "@/lib/rate-limit";
@@ -32,6 +36,26 @@ function ensErrorKey(code: EnsResolveError["code"]): ApiMsgKey {
   }
 }
 
+function parseChainIds(body: {
+  chainId?: unknown;
+  chainIds?: unknown;
+  allChains?: unknown;
+}): number[] {
+  if (body.allChains === true) {
+    return allEtherscanChainIds();
+  }
+  if (typeof body.chainId === "number" && Number.isFinite(body.chainId)) {
+    return resolveWalletChainIds([body.chainId]);
+  }
+  if (Array.isArray(body.chainIds)) {
+    const ids = body.chainIds
+      .map((x) => Number(x))
+      .filter((n) => Number.isFinite(n));
+    return resolveWalletChainIds(ids);
+  }
+  return resolveWalletChainIds(null);
+}
+
 export async function POST(req: Request) {
   const ip = clientIp(req);
   const user = await getCurrentUser();
@@ -58,6 +82,9 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       address?: string;
       linkedAddresses?: string[];
+      chainId?: number;
+      chainIds?: number[];
+      allChains?: boolean;
     };
     const address = body.address?.trim();
     if (!address) {
@@ -68,15 +95,23 @@ export async function POST(req: Request) {
       ? body.linkedAddresses.filter((a): a is string => typeof a === "string")
       : [];
 
+    const chainIds = parseChainIds(body);
+
     // Always use server ETHERSCAN_API_KEY — never ask the client for one.
-    // ENS names (e.g. vitalik.eth) are resolved server-side before sync.
-    const result = await fetchLiveWalletTxs({ address, linkedAddresses });
+    // ENS names (e.g. vitalik.eth) are resolved server-side (Ethereum mainnet only).
+    const result = await fetchLiveWalletTxs({
+      address,
+      linkedAddresses,
+      chainIds,
+    });
 
     return NextResponse.json({
       address: result.address,
       ens: result.ens ?? null,
       chain: result.chain,
       chainLabel: result.chainLabel,
+      chainIds: result.chainIds,
+      chainsSynced: result.chainsSynced,
       truncated: result.truncated,
       count: result.txs.length,
       txs: result.txs,

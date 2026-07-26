@@ -81,6 +81,20 @@ export const SYMBOL_TO_COINGECKO: Record<string, string> = {
   BUSD: "binance-usd",
   FRAX: "frax",
   GUSD: "gemini-dollar",
+  /** Native / L2 gas tokens used by Etherscan V2 wallet sync. */
+  CELO: "celo",
+  GLMR: "moonbeam",
+  MOVR: "moonriver",
+  BTT: "bittorrent",
+  XDAI: "xdai",
+  FRXETH: "frax-ether",
+  BERA: "berachain-bera",
+  SEI: "sei-network",
+  APE: "apecoin",
+  XDC: "xdce-crowd-sale",
+  HYPE: "hyperliquid",
+  S: "sonic-3",
+  MON: "monad",
 };
 
 /**

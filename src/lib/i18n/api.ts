@@ -24,7 +24,7 @@ export const apiMessages = {
     payment_failed: "決済に失敗しました。",
     wallet_address_required: "ウォレットアドレスが必要です。",
     wallet_address_invalid:
-      "有効なEthereumアドレス（0x…）またはENS名（name.eth）を入力してください。",
+      "有効なEVMアドレス（0x…）またはENS名（name.eth）を入力してください。",
     wallet_ens_invalid:
       "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
     wallet_ens_not_found:
@@ -60,7 +60,7 @@ export const apiMessages = {
     payment_failed: "Payment failed.",
     wallet_address_required: "Wallet address is required.",
     wallet_address_invalid:
-      "Enter a valid Ethereum address (0x…) or ENS name (name.eth).",
+      "Enter a valid EVM address (0x…) or ENS name (name.eth).",
     wallet_ens_invalid:
       "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
     wallet_ens_not_found:

@@ -35,8 +35,30 @@ type StoredLinks = {
   v: 1;
   linkedWallets: string[];
   walletEnsLabels: Record<string, string>;
+  /** Lowercase 0x address → Etherscan V2 chain ids last synced. */
+  walletChains: Record<string, number[]>;
   linkedExchanges: string[];
 };
+
+function parseWalletChains(
+  raw: unknown,
+): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const addr = k.trim().toLowerCase();
+    if (!addr || !Array.isArray(v)) continue;
+    const ids = [
+      ...new Set(
+        v
+          .map((x) => Number(x))
+          .filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    ].sort((a, b) => a - b);
+    if (ids.length) out[addr] = ids;
+  }
+  return out;
+}
 
 function readStoredLinks(): StoredLinks | null {
   if (typeof window === "undefined") return null;
@@ -67,6 +89,7 @@ function readStoredLinks(): StoredLinks | null {
       v: 1,
       linkedWallets: [...new Set(wallets)],
       walletEnsLabels: ens,
+      walletChains: parseWalletChains(parsed.walletChains),
       linkedExchanges: [...new Set(exchanges)],
     };
   } catch {
@@ -191,6 +214,8 @@ interface PortfolioState {
   linkedWallets: string[];
   /** Lowercase 0x address → ENS label when the user connected via ENS. */
   walletEnsLabels: Record<string, string>;
+  /** Lowercase 0x address → Etherscan V2 chain ids used for sync. */
+  walletChains: Record<string, number[]>;
   linkedExchanges: string[];
   availableYears: number[];
   addTxs: (incoming: CryptoTx[]) => void;
@@ -198,7 +223,11 @@ interface PortfolioState {
   setYear: (y: number) => void;
   setOtherIncomeJpy: (n: number) => void;
   setConnectedWallet: (a?: string) => void;
-  markWalletLinked: (address: string, ens?: string) => void;
+  markWalletLinked: (
+    address: string,
+    ens?: string,
+    chainIds?: number[],
+  ) => void;
   unlinkWallet: (address: string) => void;
   markExchangeLinked: (id: string) => void;
   unlinkExchange: (id: string) => void;
@@ -252,6 +281,9 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [walletEnsLabels, setWalletEnsLabels] = useState<
     Record<string, string>
   >({});
+  const [walletChains, setWalletChains] = useState<Record<string, number[]>>(
+    {},
+  );
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
   const [linksReady, setLinksReady] = useState(false);
   const [ledgerReady, setLedgerReady] = useState(false);
@@ -264,11 +296,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   const linksSnapshotRef = useRef({
     linkedWallets: [] as string[],
     walletEnsLabels: {} as Record<string, string>,
+    walletChains: {} as Record<string, number[]>,
     linkedExchanges: [] as string[],
   });
   linksSnapshotRef.current = {
     linkedWallets,
     walletEnsLabels,
+    walletChains,
     linkedExchanges,
   };
 
@@ -276,6 +310,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     (next?: {
       linkedWallets?: string[];
       walletEnsLabels?: Record<string, string>;
+      walletChains?: Record<string, number[]>;
       linkedExchanges?: string[];
     }) => {
       const snap = {
@@ -283,12 +318,15 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         linkedWallets: next?.linkedWallets ?? linksSnapshotRef.current.linkedWallets,
         walletEnsLabels:
           next?.walletEnsLabels ?? linksSnapshotRef.current.walletEnsLabels,
+        walletChains:
+          next?.walletChains ?? linksSnapshotRef.current.walletChains,
         linkedExchanges:
           next?.linkedExchanges ?? linksSnapshotRef.current.linkedExchanges,
       };
       linksSnapshotRef.current = {
         linkedWallets: snap.linkedWallets,
         walletEnsLabels: snap.walletEnsLabels,
+        walletChains: snap.walletChains,
         linkedExchanges: snap.linkedExchanges,
       };
       hadStoredLinksRef.current = true;
@@ -315,6 +353,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       hadStoredLinksRef.current = true;
       setLinkedWallets(stored.linkedWallets);
       setWalletEnsLabels(stored.walletEnsLabels);
+      setWalletChains(stored.walletChains);
       setLinkedExchanges(stored.linkedExchanges);
       setConnectedWallet(
         stored.linkedWallets[stored.linkedWallets.length - 1],
@@ -322,6 +361,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       linksSnapshotRef.current = {
         linkedWallets: stored.linkedWallets,
         walletEnsLabels: stored.walletEnsLabels,
+        walletChains: stored.walletChains,
         linkedExchanges: stored.linkedExchanges,
       };
     }
@@ -340,8 +380,15 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     ) {
       return;
     }
-    flushLinks({ linkedWallets, walletEnsLabels, linkedExchanges });
-  }, [linksReady, linkedWallets, walletEnsLabels, linkedExchanges, flushLinks]);
+    flushLinks({ linkedWallets, walletEnsLabels, walletChains, linkedExchanges });
+  }, [
+    linksReady,
+    linkedWallets,
+    walletEnsLabels,
+    walletChains,
+    linkedExchanges,
+    flushLinks,
+  ]);
 
   // Persist ledger locally so logout / refresh still shows imports.
   useEffect(() => {
@@ -432,10 +479,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setConnectedWallet(undefined);
     setLinkedWallets([]);
     setWalletEnsLabels({});
+    setWalletChains({});
     setLinkedExchanges([]);
     flushLinks({
       linkedWallets: [],
       walletEnsLabels: {},
+      walletChains: {},
       linkedExchanges: [],
     });
     writeStoredLedger({
@@ -454,7 +503,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   /** Add/update one wallet link — never wipes other linked wallets. */
   const markWalletLinked = useCallback(
-    (address: string, ens?: string) => {
+    (address: string, ens?: string, chainIds?: number[]) => {
       const a = address.trim().toLowerCase();
       if (!a) return;
       const prev = linksSnapshotRef.current.linkedWallets;
@@ -463,12 +512,24 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       const nextEns = label
         ? { ...linksSnapshotRef.current.walletEnsLabels, [a]: label }
         : linksSnapshotRef.current.walletEnsLabels;
+      let nextChains = linksSnapshotRef.current.walletChains;
+      if (chainIds && chainIds.length) {
+        const merged = [
+          ...new Set([
+            ...(nextChains[a] ?? []),
+            ...chainIds.filter((n) => Number.isFinite(n) && n > 0),
+          ]),
+        ].sort((x, y) => x - y);
+        nextChains = { ...nextChains, [a]: merged };
+      }
       setLinkedWallets(nextWallets);
       setConnectedWallet(a);
       if (label) setWalletEnsLabels(nextEns);
+      if (chainIds && chainIds.length) setWalletChains(nextChains);
       flushLinks({
         linkedWallets: nextWallets,
         walletEnsLabels: nextEns,
+        walletChains: nextChains,
       });
     },
     [flushLinks],
@@ -485,12 +546,16 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       const clearUnstampedWalletSource = remaining.length === 0;
       const nextEns = { ...linksSnapshotRef.current.walletEnsLabels };
       delete nextEns[target];
+      const nextChains = { ...linksSnapshotRef.current.walletChains };
+      delete nextChains[target];
       setLinkedWallets(remaining);
       setConnectedWallet(remaining[remaining.length - 1]);
       setWalletEnsLabels(nextEns);
+      setWalletChains(nextChains);
       flushLinks({
         linkedWallets: remaining,
         walletEnsLabels: nextEns,
+        walletChains: nextChains,
       });
       setTxs((prev) => {
         const filtered = prev.filter(
@@ -616,6 +681,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       connectedWallet,
       linkedWallets,
       walletEnsLabels,
+      walletChains,
       linkedExchanges,
       availableYears,
       ledgerReady,
@@ -643,6 +709,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       connectedWallet,
       linkedWallets,
       walletEnsLabels,
+      walletChains,
       linkedExchanges,
       availableYears,
       ledgerReady,

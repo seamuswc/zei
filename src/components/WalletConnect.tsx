@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import {
   isEnsName,
@@ -8,6 +8,15 @@ import {
   normalizeWalletInput,
 } from "@/lib/ens-format";
 import { shortAddr } from "@/lib/browser-wallet";
+import {
+  ETHERSCAN_CHAINS,
+  allEtherscanChainIds,
+  chainLabelForIds,
+  defaultWalletChainIds,
+  getEtherscanChain,
+  moreEtherscanChains,
+  popularEtherscanChains,
+} from "@/lib/import/etherscan-chains";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
@@ -32,12 +41,19 @@ function looksLikeEnsAttempt(raw: string): boolean {
   return n.includes(".") || n.endsWith(".eth");
 }
 
+function toggleId(selected: number[], id: number): number[] {
+  return selected.includes(id)
+    ? selected.filter((x) => x !== id)
+    : [...selected, id].sort((a, b) => a - b);
+}
+
 export function WalletConnect() {
   const {
     addTxs,
     markWalletLinked,
     linkedWallets,
     walletEnsLabels,
+    walletChains,
     unlinkWallet,
   } = usePortfolio();
   const { t } = useI18n();
@@ -46,6 +62,16 @@ export function WalletConnect() {
   const [resolvedLine, setResolvedLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selectedChains, setSelectedChains] = useState<number[]>(() =>
+    defaultWalletChainIds(),
+  );
+  const [showMore, setShowMore] = useState(false);
+
+  const popular = useMemo(() => popularEtherscanChains(), []);
+  const more = useMemo(() => moreEtherscanChains(), []);
+  const allSelected =
+    selectedChains.length === ETHERSCAN_CHAINS.length &&
+    allEtherscanChainIds().every((id) => selectedChains.includes(id));
 
   async function onConnect() {
     if (busy) return;
@@ -60,6 +86,11 @@ export function WalletConnect() {
       return;
     }
 
+    if (selectedChains.length === 0) {
+      setError(t("wallet_chains_required"));
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -70,6 +101,7 @@ export function WalletConnect() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: addr,
+          chainIds: selectedChains,
           // Include already-linked wallets so counterparty hops classify as transfers
           linkedAddresses: linkedWallets,
         }),
@@ -85,8 +117,13 @@ export function WalletConnect() {
         typeof data.address === "string" ? data.address : addr;
       const ens =
         typeof data.ens === "string" && data.ens ? data.ens : undefined;
+      const syncedChainIds = Array.isArray(data.chainIds)
+        ? data.chainIds
+            .map((x) => Number(x))
+            .filter((n) => Number.isFinite(n))
+        : selectedChains;
       addTxs(txs);
-      markWalletLinked(syncedAddress, ens);
+      markWalletLinked(syncedAddress, ens, syncedChainIds);
       if (ens) {
         setResolvedLine(
           t("wallet_resolved", { ens, address: syncedAddress }),
@@ -95,15 +132,30 @@ export function WalletConnect() {
       const chainLabel =
         typeof data.chainLabel === "string" && data.chainLabel
           ? data.chainLabel
-          : "Ethereum mainnet";
+          : chainLabelForIds(syncedChainIds);
       const okLine = t("wallet_sync_ok", {
         chain: chainLabel,
         n: Number(data.count ?? txs.length),
       });
+      const chainsSynced = Array.isArray(data.chainsSynced)
+        ? (data.chainsSynced as Array<{
+            name?: string;
+            count?: number;
+            error?: string;
+          }>)
+        : [];
+      const failBits = chainsSynced
+        .filter((c) => c.error)
+        .map((c) => c.name || "?")
+        .slice(0, 4);
+      const failNote =
+        failBits.length > 0
+          ? ` ${t("wallet_chain_partial", { chains: failBits.join(", ") })}`
+          : "";
       setStatus(
         data.truncated
-          ? `${okLine} ${t("wallet_history_truncated")}`
-          : okLine,
+          ? `${okLine} ${t("wallet_history_truncated")}${failNote}`
+          : `${okLine}${failNote}`,
       );
       setAddress("");
     } catch (e) {
@@ -140,11 +192,91 @@ export function WalletConnect() {
         />
       </label>
 
+      <fieldset className="wallet-chains" disabled={busy}>
+        <legend>{t("wallet_chains_label")}</legend>
+        <div className="wallet-chains__presets">
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => setSelectedChains(defaultWalletChainIds())}
+          >
+            {t("wallet_chains_popular")}
+          </button>
+          <button
+            type="button"
+            className={`btn btn--ghost btn--sm${allSelected ? " is-active" : ""}`}
+            onClick={() =>
+              setSelectedChains(
+                allSelected ? defaultWalletChainIds() : allEtherscanChainIds(),
+              )
+            }
+          >
+            {t("wallet_chains_all", { n: ETHERSCAN_CHAINS.length })}
+          </button>
+        </div>
+
+        <p className="wallet-chains__group-label">{t("wallet_chains_popular")}</p>
+        <div className="wallet-chains__grid">
+          {popular.map((c) => (
+            <label key={c.id} className="wallet-chains__opt">
+              <input
+                type="checkbox"
+                checked={selectedChains.includes(c.id)}
+                onChange={() =>
+                  setSelectedChains((prev) => toggleId(prev, c.id))
+                }
+              />
+              <span>
+                {c.name}
+                <small>{c.nativeSymbol}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="wallet-chains__more-toggle"
+          onClick={() => setShowMore((v) => !v)}
+        >
+          {showMore
+            ? t("wallet_chains_more_hide")
+            : t("wallet_chains_more_show", { n: more.length })}
+        </button>
+
+        {showMore && (
+          <>
+            <p className="wallet-chains__group-label">{t("wallet_chains_more")}</p>
+            <div className="wallet-chains__grid">
+              {more.map((c) => (
+                <label key={c.id} className="wallet-chains__opt">
+                  <input
+                    type="checkbox"
+                    checked={selectedChains.includes(c.id)}
+                    onChange={() =>
+                      setSelectedChains((prev) => toggleId(prev, c.id))
+                    }
+                  />
+                  <span>
+                    {c.name}
+                    <small>{c.nativeSymbol}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+
+        <p className="field-hint wallet-chains__selected">
+          {t("wallet_chains_selected", { n: selectedChains.length })}
+        </p>
+      </fieldset>
+
       <div className="import-actions">
         <button
           type="button"
           className="btn btn--solid"
-          disabled={busy || !address.trim()}
+          disabled={busy || !address.trim() || selectedChains.length === 0}
           onClick={() => void onConnect()}
         >
           {busy ? (
@@ -163,15 +295,33 @@ export function WalletConnect() {
         <ul className="link-list" aria-label={t("wallet_linked_list")}>
           {linkedWallets.map((w) => {
             const ens = walletEnsLabels[w.toLowerCase()];
+            const chains = walletChains[w.toLowerCase()] ?? [];
+            const chainNames = chains
+              .map((id) => getEtherscanChain(id)?.name)
+              .filter((n): n is string => Boolean(n));
             const label = ens
               ? t("wallet_linked_ens", {
                   ens,
                   address: shortAddr(w),
                 })
               : t("wallet_linked", { address: shortAddr(w) });
+            const chainLine =
+              chainNames.length > 0
+                ? t("wallet_linked_chains", {
+                    chains:
+                      chainNames.length <= 4
+                        ? chainNames.join(", ")
+                        : `${chainNames.slice(0, 4).join(", ")} +${chainNames.length - 4}`,
+                  })
+                : null;
             return (
-              <li key={w} className="link-list__row">
-                <span>{label}</span>
+              <li key={w} className="link-list__row link-list__row--stack">
+                <div className="link-list__meta">
+                  <span>{label}</span>
+                  {chainLine && (
+                    <span className="link-list__chains">{chainLine}</span>
+                  )}
+                </div>
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
