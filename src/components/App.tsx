@@ -85,9 +85,11 @@ function AppShell() {
             </Suspense>
           </header>
 
-          <div className="wip-banner" role="status">
-            {t("wip_banner")}
-          </div>
+          {process.env.NEXT_PUBLIC_SHOW_WIP_BANNER === "1" && (
+            <div className="wip-banner" role="status">
+              {t("wip_banner")}
+            </div>
+          )}
           <FreemiumBanner />
 
           <main id="top">

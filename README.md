@@ -17,11 +17,13 @@ Accounts (email verify) autosave the ledger to the cloud; Pro (USDC) unlocks the
 
 | Method | What it does |
 |--------|----------------|
-| **CSV / Excel export** | Upload exchange or manual books |
-| **Wallet** | Live ETH / EVM address or ENS (+ ERC-20) via Etherscan — priced to JPY |
+| **CSV export** | Upload exchange or manual books (`.csv` / `.txt`) |
+| **Wallet** | Live **Ethereum mainnet** address or ENS (+ ERC-20 + internal ETH) via Etherscan — priced to JPY (Asia/Tokyo dates) |
 | **Exchange API** | Read-only keys — **Japan:** bitFlyer, Coincheck, GMO Coin, bitbank, Binance Japan, Zaif · **Overseas:** Binance, Bybit, OKX, Kraken, KuCoin, Bitget, Gate.io, MEXC, Crypto.com, Coinbase Exchange, HTX |
 
-**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin / Bitget / Coinbase also need the API **passphrase**. Coinbase uses **Exchange** HMAC keys (not Advanced Trade JWT/CDP). Overseas USDT/USD fills are converted to JPY (CoinGecko).
+**Exchange keys:** enable **view / history / balance only**. Never enable trade or withdraw. Keys are **not stored** (used once for sync). OKX / KuCoin / Bitget / Coinbase also need the API **passphrase**. Coinbase uses **Exchange** HMAC keys only (**Advanced Trade JWT/CDP is not supported** — use CSV). Overseas USDT/USD fills are converted to JPY (CoinGecko).
+
+**Unlink:** removing a wallet or exchange also deletes that source’s imported rows from the ledger (other sources stay).
 
 ### 2. Pricing (waterfall)
 
@@ -37,7 +39,7 @@ Wraps, bridges, and same-asset transfers are treated as **non-taxable** (basis p
 - Method: **移動平均法** (moving average cost)  
 - Output: crypto **雑所得** for the selected year  
 - Optional other income: sketch only (not a final tax bill)  
-- Multi-year loss table: helper / 2028 prep — **not** current-law carryforward advice  
+- Multi-year loss table: **planning simulation only** — **not** current-law carryforward (do not file from it)  
 
 ### 4. Accountant export
 
@@ -93,8 +95,31 @@ Same receive EOA on every chain. Needs an injected browser wallet (mobile deep-l
 | Wallet / pay verify | `ETHERSCAN_API_KEY` |
 | Pro USDC | `USDC_RECEIVE_ADDRESS`, `ZEI_PRO_PRICE_USDC` |
 | Local only | `ALLOW_DEV_PAY=1` (shows “Dev: mark paid”) |
+| WIP banner | `NEXT_PUBLIC_SHOW_WIP_BANNER=1` (default off) |
 
 Copy `.env.example` → `.env.local` and fill in.
+
+---
+
+## Production ops (droplet)
+
+App path: `/var/www/zei` · process: `pm2` name `zei` · SQLite: `data/zei.db`.
+
+### Database backup
+
+```bash
+# On the server (once)
+sudo mkdir -p /var/backups/zei
+sudo cp /var/www/zei/scripts/backup-db.sh /usr/local/bin/zei-backup-db.sh
+sudo chmod +x /usr/local/bin/zei-backup-db.sh
+
+# Daily 03:15 UTC — keep 14 days
+sudo crontab -e
+# add:
+# 15 3 * * * ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /usr/local/bin/zei-backup-db.sh
+```
+
+Manual run: `ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /usr/local/bin/zei-backup-db.sh`
 
 ---
 

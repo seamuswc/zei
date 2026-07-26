@@ -1,5 +1,6 @@
 import { createHmac } from "crypto";
 import type { CryptoTx } from "@/lib/tax/types";
+import { tokyoDateFromUnknown } from "@/lib/dates";
 import {
   fetchBinanceGlobalTrades,
   fetchBybitTrades,
@@ -20,12 +21,15 @@ function uid(prefix: string): string {
 }
 
 function toDate(ts: number | string): string {
-  const d =
-    typeof ts === "number"
-      ? new Date(ts > 1e12 ? ts : ts * 1000)
-      : new Date(ts);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  return tokyoDateFromUnknown(ts);
+}
+
+function stampExchangeId(txs: CryptoTx[], exchangeId: string): CryptoTx[] {
+  return txs.map((t) => ({
+    ...t,
+    source: "exchange" as const,
+    exchangeId,
+  }));
 }
 
 function sleep(ms: number) {
@@ -768,54 +772,66 @@ export async function fetchExchangeLive(
   passphrase?: string,
 ): Promise<{ txs: CryptoTx[]; warning?: string }> {
   let warning: string | undefined;
+  let txs: CryptoTx[];
 
   switch (exchange) {
     case "bitflyer": {
       const check = await checkBitflyerReadOnly(apiKey, apiSecret);
       if (!check.ok) warning = check.warning;
-      return { txs: await fetchBitflyerExecutions(apiKey, apiSecret), warning };
+      txs = await fetchBitflyerExecutions(apiKey, apiSecret);
+      break;
     }
     case "coincheck":
-      return { txs: await fetchCoincheckTransactions(apiKey, apiSecret) };
+      txs = await fetchCoincheckTransactions(apiKey, apiSecret);
+      break;
     case "gmo":
-      return { txs: await fetchGmoExecutions(apiKey, apiSecret) };
+      txs = await fetchGmoExecutions(apiKey, apiSecret);
+      break;
     case "bitbank":
-      return { txs: await fetchBitbankTrades(apiKey, apiSecret) };
+      txs = await fetchBitbankTrades(apiKey, apiSecret);
+      break;
     case "binance-jp":
-      return { txs: await fetchBinanceJpTradesShared(apiKey, apiSecret) };
+      txs = await fetchBinanceJpTradesShared(apiKey, apiSecret);
+      break;
     case "zaif":
-      return { txs: await fetchZaifTrades(apiKey, apiSecret) };
+      txs = await fetchZaifTrades(apiKey, apiSecret);
+      break;
     case "binance":
-      return { txs: await fetchBinanceGlobalTrades(apiKey, apiSecret) };
+      txs = await fetchBinanceGlobalTrades(apiKey, apiSecret);
+      break;
     case "bybit":
-      return { txs: await fetchBybitTrades(apiKey, apiSecret) };
+      txs = await fetchBybitTrades(apiKey, apiSecret);
+      break;
     case "okx":
-      return {
-        txs: await fetchOkxTrades(apiKey, apiSecret, passphrase || ""),
-      };
+      txs = await fetchOkxTrades(apiKey, apiSecret, passphrase || "");
+      break;
     case "kraken":
-      return { txs: await fetchKrakenTrades(apiKey, apiSecret) };
+      txs = await fetchKrakenTrades(apiKey, apiSecret);
+      break;
     case "kucoin":
-      return {
-        txs: await fetchKucoinTrades(apiKey, apiSecret, passphrase || ""),
-      };
+      txs = await fetchKucoinTrades(apiKey, apiSecret, passphrase || "");
+      break;
     case "bitget":
-      return {
-        txs: await fetchBitgetTrades(apiKey, apiSecret, passphrase || ""),
-      };
+      txs = await fetchBitgetTrades(apiKey, apiSecret, passphrase || "");
+      break;
     case "gateio":
-      return { txs: await fetchGateioTrades(apiKey, apiSecret) };
+      txs = await fetchGateioTrades(apiKey, apiSecret);
+      break;
     case "mexc":
-      return { txs: await fetchMexcTrades(apiKey, apiSecret) };
+      txs = await fetchMexcTrades(apiKey, apiSecret);
+      break;
     case "cryptocom":
-      return { txs: await fetchCryptocomTrades(apiKey, apiSecret) };
+      txs = await fetchCryptocomTrades(apiKey, apiSecret);
+      break;
     case "coinbase":
-      return {
-        txs: await fetchCoinbaseTrades(apiKey, apiSecret, passphrase || ""),
-      };
+      txs = await fetchCoinbaseTrades(apiKey, apiSecret, passphrase || "");
+      break;
     case "htx":
-      return { txs: await fetchHtxTrades(apiKey, apiSecret) };
+      txs = await fetchHtxTrades(apiKey, apiSecret);
+      break;
     default:
       throw new Error("Unsupported exchange for live sync.");
   }
+
+  return { txs: stampExchangeId(txs, exchange), warning };
 }

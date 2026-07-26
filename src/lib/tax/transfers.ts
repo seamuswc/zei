@@ -12,8 +12,11 @@ function dayDiff(a: string, b: string): number {
   return ms;
 }
 
+/** Max calendar-day gap for exchange↔wallet hop matching (was 3; widened carefully). */
+export const TRANSFER_MATCH_MAX_DAYS = 10;
+
 /**
- * Match transfer_out ↔ transfer_in (same asset, ~same qty, within 3 days)
+ * Match transfer_out ↔ transfer_in (same asset, ~same qty, within TRANSFER_MATCH_MAX_DAYS)
  * so cost basis carries and hops are not treated as buys/sells.
  */
 export function matchTransfers(txs: CryptoTx[]): {
@@ -37,7 +40,7 @@ export function matchTransfers(txs: CryptoTx[]): {
           !usedIn.has(i.id) &&
           i.asset.toUpperCase() === out.asset.toUpperCase() &&
           approxEq(i.quantity, out.quantity) &&
-          dayDiff(i.date, out.date) <= 3,
+          dayDiff(i.date, out.date) <= TRANSFER_MATCH_MAX_DAYS,
       )
       .sort(
         (a, b) =>

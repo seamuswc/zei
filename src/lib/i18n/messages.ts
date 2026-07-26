@@ -35,9 +35,9 @@ export const messages = {
     import_export_link: "結果・税理士向け出力は下へ →",
 
     csv_kicker: "01 · スプレッドシート",
-    csv_title: "CSV / Excelをアップロード",
+    csv_title: "CSVをアップロード",
     csv_desc:
-      "取引所のエクスポートや手記帳に対応。APIキーが使えないときはこちら。buy/sell、transfer、income、fee、wrap、bridge、borrow/repay（借入・返済・非所得）、trade をサポート。",
+      "取引所のCSVエクスポートや手記帳に対応。APIキーが使えないときはこちら。buy/sell、transfer、income、fee、wrap、bridge、borrow/repay（借入・返済・非所得）、trade をサポート。",
     csv_drop: "CSVをドロップ",
     csv_drop_sub: "またはクリックして選択 · .csv / .txt",
     csv_sample: "サンプルCSVを読込",
@@ -48,15 +48,15 @@ export const messages = {
     wallet_kicker: "02 · オンチェーン · ライブ",
     wallet_title: "ウォレット接続",
     wallet_desc:
-      "ETH / EVMアドレスまたはENS名（ネイティブ＋主要ERC-20）をライブ取得し、円換算します。",
-    wallet_address: "ETH / EVMアドレス / ENS",
+      "EthereumメインネットのアドレスまたはENS名（ネイティブ＋主要ERC-20＋内部ETH）をライブ取得し、円換算します。",
+    wallet_address: "Ethereumアドレス / ENS",
     wallet_sync: "接続して同期",
     wallet_syncing: "同期中…",
     wallet_resolving: "ENSを解決しています…",
     wallet_sync_wait:
       "同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
     wallet_hint:
-      "0xアドレスまたはENS名（例: vitalik.eth）を貼り付けてください。ENSはサーバー側で解決します。APIキーは不要です。1件終わってから次を追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
+      "0xアドレスまたはENS名（例: vitalik.eth）を貼り付けてください。現時点はEthereumメインネットのみです。ENSはサーバー側で解決します。APIキーは不要です。1件終わってから次を追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
     wallet_linked: "接続済み: {address}",
     wallet_linked_ens: "接続済み: {ens} → {address}",
     wallet_linked_list: "接続済みウォレット",
@@ -65,16 +65,20 @@ export const messages = {
       "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
     wallet_sync_ok:
       "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
+    wallet_history_truncated:
+      "履歴が上限（ページ数）に達したため途中までしか取得できていません。忙しいウォレットはCSV併用を検討してください。",
     unlink: "解除",
     unlink_wallet_cleared:
       "解除しました — そのウォレットから取り込んだ取引を台帳から削除しました。他のウォレットのデータは残ります。",
+    unlink_exchange_cleared:
+      "解除しました — その取引所から取り込んだ取引を台帳から削除しました。他の取引所・ウォレットのデータは残ります。",
     unlink_kept_txs:
       "解除しました — 取込済みの取引は確認・税額結果に残ります。消すときは「台帳をクリア」。",
 
     exchange_kicker: "03 · 取引所 · 読み取り専用API",
     exchange_title: "取引所を連携（かんたん）",
     exchange_desc:
-      "Excel/CSVでもOK。かんたんにするなら読み取り専用APIキー（日本・海外）。出金・注文権限は絶対に付けないでください。キーは保存しません（この同期だけ使用）。",
+      "CSVでもOK。かんたんにするなら読み取り専用APIキー（日本・海外）。出金・注文権限は絶対に付けないでください。キーは保存しません（この同期だけ使用）。",
     exchange_readonly_title: "必ず読み取り専用キーを使う",
     exchange_readonly_body:
       "APIキー発行時は「照会／履歴／残高」のみON。「注文・取引・出金・送付」はすべてOFF。ZEIは秘密鍵をサーバーに保存しません。",
@@ -118,7 +122,7 @@ export const messages = {
     exchange_perm_cryptocom:
       "Crypto.com Exchange: 読み取り専用キー。Trade / Withdraw はOFF。スポットのみ取り込みます。",
     exchange_perm_coinbase:
-      "Coinbase Exchange: View / trade history + パスフレーズ。Advanced Trade（JWT/CDP）キーは非対応。",
+      "Coinbase Exchange（HMAC + パスフレーズ）のみ対応。Advanced Trade / CDP の JWT APIキーは非対応です。",
     exchange_perm_htx:
       "HTX: 読み取り専用。注文・出金はOFF。USDT建てスポット約定を円換算します。",
     exchange_hist_gmo:
@@ -128,7 +132,7 @@ export const messages = {
     exchange_hist_mexc:
       "注意: MEXCのAPIは直近約1か月の約定のみ。年間フル履歴はCSVを使ってください。",
     exchange_hist_coinbase:
-      "注意: Coinbase Exchange APIキーが必要です（Advanced TradeのJWT/CDPキーは使えません）。",
+      "注意: Coinbase Exchange の HMAC APIキーのみ。Advanced Trade（JWT/CDP）は使えません — CSVを使ってください。",
 
     income_kicker: "暗号資産のみ",
     income_title: "任意：他の所得（税率の目安用）",
@@ -150,16 +154,22 @@ export const messages = {
     results_export: "税理士向けに出力",
     results_clear: "台帳をクリア",
     results_clear_hint:
-      "ウォレットの「解除」はそのウォレット分の取込行だけ削除します。取引所の「解除」では取引は残り、「台帳をクリア」ですべて消えます。",
+      "ウォレット／取引所の「解除」は、そのソースから取り込んだ行だけ台帳から削除します。「台帳をクリア」ですべて消えます。",
     results_active: "有効な取引",
     results_matched: "振替マッチ",
     results_income: "報酬・受取",
     results_losses: "損失",
     results_gains: "プラス所得",
     results_net: "雑所得（ネット）",
-    results_after_carry: "繰越後",
+    results_after_carry: "繰越後（参考・現行法外）",
     results_export_banner:
       "税理士提出用パック: 「税理士向けに出力」でZIPをダウンロード（README・売却明細・期末残高・全取引台帳）。",
+    export_blocked_prices:
+      "出力できません: この年に円換算不明／¥0の売却・受取が{n}件あります。確認画面で価格を入力するか除外してください。",
+    export_fix_prices_cta: "確認画面で修正",
+    price_needs_fix: "要価格",
+    review_needs_price:
+      "円換算不明または¥0の売却・受取が{n}件あります。税理士ZIP出力前に修正または除外してください。",
     results_impact_kicker: "暗号資産所得（最終税額ではない）",
     results_impact_p:
       "売却・受取・手数料後のネットです。他所得との合算はZEIの範囲外です。",
@@ -185,10 +195,10 @@ export const messages = {
     th_avg: "平均取得単価",
     th_book: "簿価",
 
-    years_kicker: "複数年 · アカウント",
-    years_title: "暗号資産の損失繰越（参考）",
+    years_kicker: "複数年 · 参考のみ",
+    years_title: "損失繰越シミュレーション（現行法ではありません）",
     years_sub:
-      "現行の雑所得は原則繰越不可です。2028年頃の改正では、国内取引所の対象資産に3年繰越が入る見込みです。税理士に確認してください。「税制の説明」で詳細を表示。",
+      "【計画用・現行法外】いまの雑所得に損失繰越はありません。下表は2028年頃の改正を見据えた参考シミュレーションです。申告には使わないでください。税理士に確認を。「税制の説明」で詳細。",
     years_th_year: "年",
     years_th_net: "ネット",
     years_th_in: "繰越入",
@@ -310,7 +320,7 @@ export const messages = {
     rules_zei_4: "✅ 価格ウォーターフォール＋手動編集",
     rules_zei_5: "✅ 税理士向けZIP出力",
     rules_zei_6:
-      "⚠️ 複数年の繰越表は参考／2028年準備用 — 現行申告の助言ではありません",
+      "⚠️ 複数年の損失繰越表は計画用シミュレーションのみ — 現行法ではない。申告に使わないでください",
     rules_zei_7: "⏳ 国内取引所の一律20.315%モードは今後対応",
     rules_disclaimer:
       "税務・法務・会計の助言ではありません。申告前に税理士へ確認してください。",
@@ -374,9 +384,9 @@ export const messages = {
     import_export_link: "Results & accountant export below →",
 
     csv_kicker: "01 · Spreadsheet",
-    csv_title: "Upload CSV / Excel export",
+    csv_title: "Upload CSV export",
     csv_desc:
-      "Exchange exports or manual books. Use this if you prefer not to use an API key. Supports buy/sell, transfer, income, fee, wrap, bridge, borrow/repay (loans — not income), trade.",
+      "Exchange CSV exports or manual books. Use this if you prefer not to use an API key. Supports buy/sell, transfer, income, fee, wrap, bridge, borrow/repay (loans — not income), trade.",
     csv_drop: "Drop CSV here",
     csv_drop_sub: "or click to browse · .csv / .txt",
     csv_sample: "Load sample CSV",
@@ -387,15 +397,15 @@ export const messages = {
     wallet_kicker: "02 · On-chain · live",
     wallet_title: "Connect wallet",
     wallet_desc:
-      "Live read: ETH / EVM address or ENS (native + major ERC-20) — priced to JPY.",
-    wallet_address: "ETH / EVM address / ENS",
+      "Live read: Ethereum mainnet address or ENS (native + major ERC-20 + internal ETH) — priced to JPY.",
+    wallet_address: "Ethereum address / ENS",
     wallet_sync: "Connect & sync",
     wallet_syncing: "Syncing…",
     wallet_resolving: "Resolving ENS…",
     wallet_sync_wait:
       "Sync in progress — please wait. You can’t add another address until this finishes.",
     wallet_hint:
-      "Paste a 0x address or ENS name (e.g. vitalik.eth). ENS is resolved on the server — no API key needed. Add another after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
+      "Paste a 0x address or ENS name (e.g. vitalik.eth). Ethereum mainnet only for now. ENS is resolved on the server — no API key needed. Add another after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
     wallet_linked: "Linked: {address}",
     wallet_linked_ens: "Linked: {ens} → {address}",
     wallet_linked_list: "Linked wallets",
@@ -404,16 +414,20 @@ export const messages = {
       "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
     wallet_sync_ok:
       "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
+    wallet_history_truncated:
+      "History hit the page limit — some older/middle txs may be missing. Busy wallets: prefer CSV alongside sync.",
     unlink: "Unlink",
     unlink_wallet_cleared:
       "Unlinked — that wallet’s imported rows were removed from the ledger. Other wallets’ data is kept.",
+    unlink_exchange_cleared:
+      "Unlinked — that exchange’s imported rows were removed from the ledger. Other exchanges and wallets are kept.",
     unlink_kept_txs:
       "Unlinked — imported transactions stay in Review / results until you clear them.",
 
     exchange_kicker: "03 · Exchange · read-only API",
     exchange_title: "Link exchange (easiest)",
     exchange_desc:
-      "CSV/Excel works too. Easier: paste a read-only API key (Japan or overseas). Never enable trade or withdraw. Keys are not stored — used only for this sync.",
+      "CSV works too. Easier: paste a read-only API key (Japan or overseas). Never enable trade or withdraw. Keys are not stored — used only for this sync.",
     exchange_readonly_title: "Read-only API keys only",
     exchange_readonly_body:
       "When creating a key, enable view/history/balance only. Turn OFF order, trade, withdraw, and send. ZEI never stores your secret.",
@@ -459,7 +473,7 @@ export const messages = {
     exchange_perm_cryptocom:
       "Crypto.com Exchange: read-only key. No Trade or Withdraw. Spot fills only.",
     exchange_perm_coinbase:
-      "Coinbase Exchange: View / trade history + passphrase. Advanced Trade JWT/CDP keys are not supported.",
+      "Coinbase Exchange (HMAC + passphrase) only. Advanced Trade / CDP JWT API keys are not supported.",
     exchange_perm_htx:
       "HTX: read-only. No order or withdraw. USDT spot fills converted to JPY.",
     exchange_hist_gmo:
@@ -469,7 +483,7 @@ export const messages = {
     exchange_hist_mexc:
       "Note: MEXC’s API only covers about the last month. Use CSV for a full tax year.",
     exchange_hist_coinbase:
-      "Note: Coinbase Exchange API keys required (Advanced Trade JWT/CDP keys will not work).",
+      "Note: Coinbase Exchange HMAC API keys only. Advanced Trade (JWT/CDP) will not work — use CSV instead.",
 
     income_kicker: "Crypto only",
     income_title: "Optional: other income for a rough rate check",
@@ -491,16 +505,22 @@ export const messages = {
     results_export: "Export for accountant",
     results_clear: "Clear ledger",
     results_clear_hint:
-      "Unlinking a wallet removes that wallet’s imported rows. Unlinking an exchange leaves txs until you Clear ledger (wipes everything).",
+      "Unlinking a wallet or exchange removes that source’s imported rows from the ledger. Clear ledger wipes everything.",
     results_active: "Active txs",
     results_matched: "Matched transfers",
     results_income: "Income / rewards",
     results_losses: "Losses",
     results_gains: "Positive gains",
     results_net: "Net crypto 雑所得",
-    results_after_carry: "After loss carry",
+    results_after_carry: "After carry (planning only)",
     results_export_banner:
       "Tax accountant pack: click Export for accountant to download a ZIP (README + sale detail + lots + full ledger).",
+    export_blocked_prices:
+      "Export blocked: {n} sell/income row(s) in this year have unknown or ¥0 JPY. Fix or exclude them in Review.",
+    export_fix_prices_cta: "Fix in Review",
+    price_needs_fix: "needs price",
+    review_needs_price:
+      "{n} sell/income row(s) have unknown or ¥0 JPY. Fix or exclude before accountant ZIP export.",
     results_impact_kicker: "Crypto gain (not final tax)",
     results_impact_p:
       "Net figure after sells, income receipts, and in-asset fees. Japan adds this to other income — this app does not finalize that.",
@@ -526,10 +546,10 @@ export const messages = {
     th_avg: "Avg cost",
     th_book: "Book value",
 
-    years_kicker: "Multi-year · account",
-    years_title: "Crypto loss carry across years",
+    years_kicker: "Multi-year · planning only",
+    years_title: "Loss-carry simulation (not current law)",
     years_sub:
-      "Japan generally does not allow 雑所得 loss carryforward today. From ~2028, eligible JP-exchange assets may get 3-year carry. Confirm with a tax accountant. Open Tax rules for details.",
+      "Planning only — not current law. Japan generally does not allow 雑所得 loss carryforward today. This table is a forward-looking helper for the ~2028 reform. Do not use it for filing. Confirm with a tax accountant. Open Tax rules for details.",
     years_th_year: "Year",
     years_th_net: "Net crypto",
     years_th_in: "Carry in",
@@ -651,7 +671,7 @@ export const messages = {
     rules_zei_4: "✅ Price waterfall + full manual edit",
     rules_zei_5: "✅ Accountant ZIP export",
     rules_zei_6:
-      "⚠️ Multi-year loss table = helper / 2028 prep — not current-law filing advice",
+      "⚠️ Multi-year loss table = planning simulation only — NOT current law; do not file from it",
     rules_zei_7: "⏳ 2028 flat 20.315% mode for JP-exchange assets — coming later",
     rules_disclaimer:
       "Not tax, legal, or accounting advice. Confirm with a 税理士 before filing.",

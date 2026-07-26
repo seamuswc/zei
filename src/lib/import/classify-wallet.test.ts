@@ -310,6 +310,46 @@ function leg(partial: Partial<WalletLeg> & Pick<WalletLeg, "id" | "asset" | "dir
   if (txs.length !== 0) throw new Error("spam inbound should be skipped");
 }
 
+// Unknown one-sided outbound → transfer_out (not sell)
+{
+  const txs = classifyWalletLegs([
+    leg({
+      id: "out_unk",
+      asset: "ETH",
+      direction: "out",
+      quantity: 0.1,
+      jpyValue: 0,
+      priceSource: "unknown",
+      knownAsset: true,
+      from: WALLET,
+      to: "0x5555555555555555555555555555555555555555",
+    }),
+  ]);
+  if (txs[0]?.side !== "transfer_out") {
+    throw new Error(`expected transfer_out, got ${txs[0]?.side}`);
+  }
+}
+
+// Low-confidence inbound (unknown price) → transfer_in (not buy)
+{
+  const txs = classifyWalletLegs([
+    leg({
+      id: "in_unk",
+      asset: "ETH",
+      direction: "in",
+      quantity: 0.2,
+      jpyValue: 0,
+      priceSource: "unknown",
+      knownAsset: true,
+      from: "0x5555555555555555555555555555555555555555",
+      to: WALLET,
+    }),
+  ]);
+  if (txs[0]?.side !== "transfer_in") {
+    throw new Error(`expected transfer_in, got ${txs[0]?.side}`);
+  }
+}
+
 // Multi-hop netting: intermediate USDC cancels → ETH out + WBTC in swap
 {
   const hash = "0xmultihop";

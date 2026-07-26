@@ -75,9 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const localHasTxs = txsRef.current.length > 0;
 
     if (serverHasTxs && data.ledger) {
-      // Cloud wins when it has rows.
       skipSaveRef.current = true;
-      hydrateFromServer(data.ledger);
+      if (localHasTxs) {
+        // Union by id — do not blindly replace local edits.
+        hydrateFromServer({ ...data.ledger, mergeWithLocal: true });
+      } else {
+        hydrateFromServer(data.ledger);
+      }
     } else if (localHasTxs) {
       // Empty/missing cloud ledger must not wipe local imports (or flash-empty).
       skipSaveRef.current = false;

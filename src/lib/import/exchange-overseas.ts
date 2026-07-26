@@ -1,5 +1,6 @@
 import { createHmac, createHash } from "crypto";
 import type { CryptoTx } from "@/lib/tax/types";
+import { tokyoDateFromUnknown } from "@/lib/dates";
 import { resolveJpyUnitPrice } from "@/lib/import/prices";
 
 function uid(prefix: string): string {
@@ -7,12 +8,7 @@ function uid(prefix: string): string {
 }
 
 function toDate(ts: number | string): string {
-  const d =
-    typeof ts === "number"
-      ? new Date(ts > 1e12 ? ts : ts * 1000)
-      : new Date(ts);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  return tokyoDateFromUnknown(ts);
 }
 
 function sleep(ms: number) {

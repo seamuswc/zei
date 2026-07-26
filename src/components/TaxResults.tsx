@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildAccountantPack,
   downloadAccountantZip,
 } from "@/lib/export/accountant";
 import { formatJpy, formatQty } from "@/lib/tax/engine";
 import { filingTaxYears, isFilingYearLocked } from "@/lib/billing";
+import {
+  exportBlockedByMissingPrices,
+  txsNeedingPrice,
+} from "@/lib/tax/price-quality";
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
@@ -27,10 +31,19 @@ export function TaxResults() {
   const { user, isPro, loading, startProPay } = useAuth();
   const userPickedYear = useRef(false);
   const [payBusy, setPayBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const locked = isFilingYearLocked(year, isPro);
   const [lastYear, thisYear] = filingTaxYears();
   const filingVars = { lastYear, thisYear };
+
+  const missingPrices = useMemo(
+    () => txsNeedingPrice(txs, year),
+    [txs, year],
+  );
+  const pricesBlockExport =
+    !locked && exportBlockedByMissingPrices(txs, year);
 
   // Steer free users off both locked filing years by default (still selectable → paywall).
   useEffect(() => {
@@ -50,16 +63,74 @@ export function TaxResults() {
     );
   }
 
-  function exportPack() {
+  async function exportPack() {
+    setExportError(null);
+    // Never ship ZIP bytes for locked filing years (client soft-lock + server gate).
     if (locked) return;
-    const pack = buildAccountantPack({
-      year,
-      txs,
-      summary,
-      otherIncomeJpy,
-      matchedTransfers: matches.length,
-    });
-    downloadAccountantZip(pack.filename, pack.files);
+    if (exportBlockedByMissingPrices(txs, year)) {
+      setExportError(t("export_blocked_prices", { n: missingPrices.length }));
+      return;
+    }
+
+    setExportBusy(true);
+    try {
+      if (user) {
+        const res = await fetch("/api/export/accountant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            year,
+            txs,
+            otherIncomeJpy,
+            matchedTransfers: matches.length,
+          }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            code?: string;
+          };
+          if (data.code === "missing_prices") {
+            setExportError(
+              t("export_blocked_prices", { n: missingPrices.length }),
+            );
+            return;
+          }
+          if (data.code === "pro_required" || res.status === 403) {
+            setExportError(t("freemium_export_locked", filingVars));
+            return;
+          }
+          throw new Error(data.error || "Export failed");
+        }
+        const blob = await res.blob();
+        const cd = res.headers.get("Content-Disposition") || "";
+        const match = /filename="([^"]+)"/.exec(cd);
+        const filename =
+          match?.[1] ??
+          `ZEI_tax_pack_${year}_${new Date().toISOString().slice(0, 10)}.zip`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Guest / unlocked years: client-side pack (still blocked above if locked/prices).
+      const pack = buildAccountantPack({
+        year,
+        txs,
+        summary,
+        otherIncomeJpy,
+        matchedTransfers: matches.length,
+      });
+      downloadAccountantZip(pack.filename, pack.files);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExportBusy(false);
+    }
   }
 
   function kindLabel(kind: string) {
@@ -85,6 +156,7 @@ export function TaxResults() {
   }
 
   const masked = "—";
+  const exportDisabled = locked || pricesBlockExport || exportBusy;
 
   return (
     <section
@@ -118,10 +190,10 @@ export function TaxResults() {
           <button
             type="button"
             className="btn btn--solid"
-            disabled={locked}
-            onClick={exportPack}
+            disabled={exportDisabled}
+            onClick={() => void exportPack()}
           >
-            {t("results_export")}
+            {exportBusy ? t("auth_creating") : t("results_export")}
           </button>
           <button type="button" className="btn btn--ghost" onClick={clearTxs}>
             {t("results_clear")}
@@ -130,6 +202,16 @@ export function TaxResults() {
       </div>
 
       <p className="field-hint results-clear-hint">{t("results_clear_hint")}</p>
+
+      {pricesBlockExport && (
+        <div className="price-warning" role="alert">
+          <p>{t("export_blocked_prices", { n: missingPrices.length })}</p>
+          <a className="btn btn--solid btn--sm" href="#review">
+            {t("export_fix_prices_cta")}
+          </a>
+        </div>
+      )}
+      {exportError && <p className="status-err-line">{exportError}</p>}
 
       {locked && (
         <div className="paywall">
@@ -177,7 +259,7 @@ export function TaxResults() {
           <strong>{locked ? masked : formatJpy(summary.totalGainJpy)}</strong>
         </div>
         {yearCarry && (
-          <div className="stat">
+          <div className="stat stat--muted">
             <span>{t("results_after_carry")}</span>
             <strong>
               {locked ? masked : formatJpy(yearCarry.taxableAfterCarryJpy)}
@@ -189,7 +271,9 @@ export function TaxResults() {
       <p className="export-banner" id="export-note">
         {locked
           ? t("freemium_export_locked", filingVars)
-          : t("results_export_banner")}
+          : pricesBlockExport
+            ? t("export_blocked_prices", { n: missingPrices.length })
+            : t("results_export_banner")}
       </p>
 
       <div className={`estimate${locked ? " is-blurred" : ""}`} aria-hidden={locked}>
@@ -212,10 +296,10 @@ export function TaxResults() {
           <button
             type="button"
             className="btn btn--solid"
-            disabled={locked}
-            onClick={exportPack}
+            disabled={exportDisabled}
+            onClick={() => void exportPack()}
           >
-            {t("results_download")}
+            {exportBusy ? t("auth_creating") : t("results_download")}
           </button>
         </div>
       </div>
@@ -246,20 +330,30 @@ export function TaxResults() {
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.disposals.map((d) => (
-                    <tr key={d.id}>
-                      <td>{d.date}</td>
-                      <td>{kindLabel(d.kind)}</td>
-                      <td>{d.asset}</td>
-                      <td>{formatQty(d.quantity)}</td>
-                      <td>{formatJpy(d.proceedsJpy)}</td>
-                      <td>{formatJpy(d.costBasisJpy)}</td>
-                      <td className={d.gainJpy >= 0 ? "gain" : "loss"}>
-                        {formatJpy(d.gainJpy)}
-                      </td>
-                      <td className="muted">{d.priceSource ?? "—"}</td>
-                    </tr>
-                  ))}
+                  {summary.disposals.map((d) => {
+                    const badPrice =
+                      d.priceSource === "unknown" || !(d.proceedsJpy > 0);
+                    return (
+                      <tr
+                        key={d.id}
+                        className={badPrice ? "row-needs-price" : undefined}
+                      >
+                        <td>{d.date}</td>
+                        <td>{kindLabel(d.kind)}</td>
+                        <td>{d.asset}</td>
+                        <td>{formatQty(d.quantity)}</td>
+                        <td>{formatJpy(d.proceedsJpy)}</td>
+                        <td>{formatJpy(d.costBasisJpy)}</td>
+                        <td className={d.gainJpy >= 0 ? "gain" : "loss"}>
+                          {formatJpy(d.gainJpy)}
+                        </td>
+                        <td className={badPrice ? "needs-price" : "muted"}>
+                          {d.priceSource ?? "—"}
+                          {badPrice ? ` · ${t("price_needs_fix")}` : ""}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

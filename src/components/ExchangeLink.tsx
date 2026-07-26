@@ -77,7 +77,7 @@ export function ExchangeLink() {
 
   function onUnlink(id: string) {
     unlinkExchange(id);
-    setStatus(t("unlink_kept_txs"));
+    setStatus(t("unlink_exchange_cleared"));
     setError(null);
     setWarning(null);
   }

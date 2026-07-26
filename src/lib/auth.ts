@@ -247,6 +247,17 @@ export async function clearSessionCookie() {
   jar.delete(COOKIE);
 }
 
+/** Delete the session row for the current cookie (logout revoke). */
+export async function revokeCurrentSession(): Promise<void> {
+  const jar = await cookies();
+  const token = jar.get(COOKIE)?.value;
+  if (!token) return;
+  const db = getDb();
+  db.prepare(`DELETE FROM sessions WHERE token = ?`).run(
+    createHash("sha256").update(token).digest("hex"),
+  );
+}
+
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
@@ -256,6 +267,20 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     const userId = String(payload.uid || "");
     if (!userId) return null;
     const db = getDb();
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const session = db
+      .prepare(
+        `SELECT user_id, expires_at FROM sessions WHERE token = ?`,
+      )
+      .get(tokenHash) as
+      | { user_id: string; expires_at: string }
+      | undefined;
+    if (!session || session.user_id !== userId) return null;
+    if (new Date(session.expires_at).getTime() < Date.now()) {
+      db.prepare(`DELETE FROM sessions WHERE token = ?`).run(tokenHash);
+      return null;
+    }
+
     const row = db
       .prepare(
         `SELECT id, email, plan, plan_expires_at, email_verified_at FROM users WHERE id = ?`,

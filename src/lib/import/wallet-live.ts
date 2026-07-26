@@ -12,6 +12,7 @@ import {
   type WalletLeg,
 } from "@/lib/import/classify-wallet";
 import { EnsResolveError, resolveWalletAddress } from "@/lib/ens";
+import { tokyoDateFromTs } from "@/lib/dates";
 
 function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -33,6 +34,7 @@ interface EtherscanTx {
   isError?: string;
   gasUsed?: string;
   gasPrice?: string;
+  type?: string;
 }
 
 interface EtherscanTokenTx {
@@ -68,8 +70,13 @@ async function etherscanGet(
 
 type Series = { byDate: Map<string, number>; source: PriceSource };
 
-/** Per-list page size. Oldest-only truncates recent tax years on busy wallets. */
-const ETHERSCAN_PAGE = "150";
+/** Per-list page size. Paginate until empty or MAX_PAGES. */
+const ETHERSCAN_PAGE = 150;
+const ETHERSCAN_MAX_PAGES = 20;
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function loadSeriesForCoin(
   coinId: string,
@@ -89,49 +96,61 @@ async function loadSeriesForCoin(
 }
 
 /**
- * Fetch oldest chunk + newest chunk and merge, so early cost basis and
- * current filing years both survive the per-list cap.
+ * Paginate an Etherscan account list (asc) until a short page or max pages.
+ * `truncated` is true when page MAX still returned a full page (history may continue).
  */
-async function etherscanListBothEnds<T extends { hash: string; timeStamp: string }>(
+async function etherscanListPaged<T extends { hash: string; timeStamp: string }>(
   base: Record<string, string>,
   apiKey: string,
   rowKey: (row: T) => string,
-): Promise<{ rows: T[]; error?: string }> {
-  const oldest = (await etherscanGet(
-    { ...base, page: "1", offset: ETHERSCAN_PAGE, sort: "asc" },
-    apiKey,
-  )) as { status: string; message: string; result: T[] | string };
-
-  const newest = (await etherscanGet(
-    { ...base, page: "1", offset: ETHERSCAN_PAGE, sort: "desc" },
-    apiKey,
-  )) as { status: string; message: string; result: T[] | string };
-
+): Promise<{ rows: T[]; truncated: boolean; error?: string }> {
   const byKey = new Map<string, T>();
-  for (const block of [oldest.result, newest.result]) {
-    if (!Array.isArray(block)) continue;
-    for (const row of block) byKey.set(rowKey(row), row);
+  let truncated = false;
+  let lastError: string | undefined;
+
+  for (let page = 1; page <= ETHERSCAN_MAX_PAGES; page++) {
+    const data = (await etherscanGet(
+      {
+        ...base,
+        page: String(page),
+        offset: String(ETHERSCAN_PAGE),
+        sort: "asc",
+      },
+      apiKey,
+    )) as { status: string; message: string; result: T[] | string };
+
+    if (!Array.isArray(data.result)) {
+      if (
+        typeof data.result === "string" &&
+        !/no transactions/i.test(data.result)
+      ) {
+        lastError = data.result || data.message || "Etherscan error";
+      }
+      break;
+    }
+
+    if (data.result.length === 0) break;
+
+    for (const row of data.result) byKey.set(rowKey(row), row);
+
+    if (data.result.length < ETHERSCAN_PAGE) break;
+    if (page === ETHERSCAN_MAX_PAGES) {
+      truncated = true;
+      break;
+    }
+    // Soft pacing for free-tier Etherscan keys
+    await sleep(220);
   }
 
-  if (byKey.size === 0) {
-    for (const block of [oldest, newest]) {
-      if (
-        typeof block.result === "string" &&
-        !/no transactions/i.test(block.result)
-      ) {
-        return {
-          rows: [],
-          error: block.result || block.message || "Etherscan error",
-        };
-      }
-    }
-    return { rows: [] };
+  if (byKey.size === 0 && lastError) {
+    return { rows: [], truncated: false, error: lastError };
   }
 
   return {
     rows: [...byKey.values()].sort(
       (a, b) => Number(a.timeStamp) - Number(b.timeStamp),
     ),
+    truncated,
   };
 }
 
@@ -147,11 +166,16 @@ function priceFromSeries(
   return { jpy, source: series.source };
 }
 
+export type WalletSyncMeta = {
+  truncated: boolean;
+  chainLabel: string;
+};
+
 export async function fetchEthereumWalletTxs(
   address: string,
   etherscanApiKey: string,
   linkedAddresses: string[] = [],
-): Promise<CryptoTx[]> {
+): Promise<{ txs: CryptoTx[]; truncated: boolean }> {
   const key = etherscanApiKey.trim();
   if (!key) {
     throw new Error(
@@ -161,8 +185,9 @@ export async function fetchEthereumWalletTxs(
 
   const addr = address.toLowerCase();
   const legs: WalletLeg[] = [];
+  let anyTruncated = false;
 
-  const native = await etherscanListBothEnds<EtherscanTx>(
+  const native = await etherscanListPaged<EtherscanTx>(
     {
       module: "account",
       action: "txlist",
@@ -174,13 +199,42 @@ export async function fetchEthereumWalletTxs(
     (row) => row.hash.toLowerCase(),
   );
   if (native.error) throw new Error(native.error);
+  anyTruncated = anyTruncated || native.truncated;
+
+  const internal = await etherscanListPaged<EtherscanTx>(
+    {
+      module: "account",
+      action: "txlistinternal",
+      address,
+      startblock: "0",
+      endblock: "99999999",
+    },
+    key,
+    (row) =>
+      [
+        row.hash,
+        row.from,
+        row.to,
+        row.value,
+        row.timeStamp,
+        row.type ?? "",
+      ]
+        .join(":")
+        .toLowerCase(),
+  );
+  // Internal can fail on some keys — treat as empty rather than aborting
+  if (!internal.error) {
+    anyTruncated = anyTruncated || internal.truncated;
+  }
 
   const ethDates: string[] = [];
-  for (const row of native.rows) {
+  const nativeAndInternal = [
+    ...native.rows,
+    ...(internal.error ? [] : internal.rows),
+  ];
+  for (const row of nativeAndInternal) {
     if (row.isError === "1") continue;
-    ethDates.push(
-      new Date(Number(row.timeStamp) * 1000).toISOString().slice(0, 10),
-    );
+    ethDates.push(tokyoDateFromTs(Number(row.timeStamp)));
   }
 
   const ethSeries = await loadSeriesForCoin("ethereum", ethDates);
@@ -189,9 +243,7 @@ export async function fetchEthereumWalletTxs(
     if (row.isError === "1") continue;
     const from = row.from.toLowerCase();
     const to = (row.to || "").toLowerCase();
-    const date = new Date(Number(row.timeStamp) * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const date = tokyoDateFromTs(Number(row.timeStamp));
     const { jpy, source } = priceFromSeries(ethSeries, date);
 
     const wei = BigInt(row.value || "0");
@@ -248,7 +300,41 @@ export async function fetchEthereumWalletTxs(
     }
   }
 
-  const tokens = await etherscanListBothEnds<EtherscanTokenTx>(
+  // Internal ETH transfers (contract → wallet, etc.) — no gas on these rows
+  if (!internal.error) {
+    for (const row of internal.rows) {
+      if (row.isError === "1") continue;
+      const from = row.from.toLowerCase();
+      const to = (row.to || "").toLowerCase();
+      const date = tokyoDateFromTs(Number(row.timeStamp));
+      const { jpy, source } = priceFromSeries(ethSeries, date);
+      const wei = BigInt(row.value || "0");
+      if (wei <= BigInt(0)) continue;
+      const qty = Number(wei) / 1e18;
+      if (qty < 1e-8) continue;
+      const direction =
+        to === addr ? "in" : from === addr ? "out" : null;
+      if (!direction) continue;
+      legs.push({
+        id: uid("inti"),
+        date,
+        asset: "ETH",
+        quantity: qty,
+        jpyValue: Math.round(qty * jpy),
+        unitPriceJpy: jpy,
+        priceSource: source,
+        direction,
+        from,
+        to,
+        txHash: row.hash,
+        walletAddress: addr,
+        note: `ETH internal · ${row.hash.slice(0, 10)}…`,
+        knownAsset: true,
+      });
+    }
+  }
+
+  const tokens = await etherscanListPaged<EtherscanTokenTx>(
     {
       module: "account",
       action: "tokentx",
@@ -270,6 +356,7 @@ export async function fetchEthereumWalletTxs(
         .toLowerCase(),
   );
   if (tokens.error) throw new Error(tokens.error);
+  anyTruncated = anyTruncated || tokens.truncated;
 
   if (tokens.rows.length > 0) {
     type TokenRow = {
@@ -295,9 +382,7 @@ export async function fetchEthereumWalletTxs(
       if (raw === BigInt(0)) continue;
       const qty = Number(raw) / 10 ** decimals;
       if (qty < 1e-12) continue;
-      const date = new Date(Number(row.timeStamp) * 1000)
-        .toISOString()
-        .slice(0, 10);
+      const date = tokyoDateFromTs(Number(row.timeStamp));
       const from = row.from.toLowerCase();
       const to = row.to.toLowerCase();
       const direction =
@@ -364,7 +449,10 @@ export async function fetchEthereumWalletTxs(
 
   const classified = classifyWalletLegs(legs, { linkedAddresses });
   // collapseWraps still catches any residual buy+sell wrap pairs
-  return collapseWraps(classified).sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    txs: collapseWraps(classified).sort((a, b) => a.date.localeCompare(b.date)),
+    truncated: anyTruncated,
+  };
 }
 
 export async function fetchLiveWalletTxs(options: {
@@ -374,6 +462,8 @@ export async function fetchLiveWalletTxs(options: {
   address: string;
   ens?: string;
   chain: string;
+  chainLabel: string;
+  truncated: boolean;
   txs: CryptoTx[];
 }> {
   let resolved: { address: string; ens?: string };
@@ -396,10 +486,17 @@ export async function fetchLiveWalletTxs(options: {
   }
 
   const key = process.env.ETHERSCAN_API_KEY || "";
-  const txs = await fetchEthereumWalletTxs(
+  const { txs, truncated } = await fetchEthereumWalletTxs(
     address,
     key,
     options.linkedAddresses ?? [],
   );
-  return { address, ens: resolved.ens, chain, txs };
+  return {
+    address,
+    ens: resolved.ens,
+    chain,
+    chainLabel: "Ethereum mainnet",
+    truncated,
+    txs,
+  };
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TxSide } from "@/lib/tax/types";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { formatJpy } from "@/lib/tax/engine";
+import { txsNeedingPrice } from "@/lib/tax/price-quality";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
@@ -23,7 +24,7 @@ const SIDES: TxSide[] = [
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 0] as const;
 
 export function ReviewLedger() {
-  const { txs, updateTx, removeTx, toggleExclude } = usePortfolio();
+  const { txs, year, updateTx, removeTx, toggleExclude } = usePortfolio();
   const { t } = useI18n();
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(0);
@@ -35,6 +36,17 @@ export function ReviewLedger() {
   const start = total === 0 ? 0 : currentPage * effectiveSize;
   const end = Math.min(start + effectiveSize, total);
   const pageTxs = txs.slice(start, end);
+  const needPriceIds = useMemo(() => {
+    const set = new Set(txsNeedingPrice(txs, year).map((t) => t.id));
+    // Also flag other years' unknown sell/income so Review is useful after import
+    for (const tx of txs) {
+      if (tx.excluded) continue;
+      if (tx.side !== "sell" && tx.side !== "income") continue;
+      if (tx.priceSource === "unknown" || !(tx.jpyValue > 0)) set.add(tx.id);
+    }
+    return set;
+  }, [txs, year]);
+  const needPriceCount = needPriceIds.size;
 
   if (txs.length === 0) return null;
 
@@ -48,6 +60,11 @@ export function ReviewLedger() {
         <p className="import-kicker">{t("review_kicker")}</p>
         <h2>{t("review_title")}</h2>
         <p>{t("review_sub")}</p>
+        {needPriceCount > 0 && (
+          <p className="price-warning price-warning--inline" role="status">
+            {t("review_needs_price", { n: needPriceCount })}
+          </p>
+        )}
       </div>
       <div className="ledger-pager">
         <p className="ledger-pager__meta">
@@ -112,10 +129,18 @@ export function ReviewLedger() {
             </tr>
           </thead>
           <tbody>
-            {pageTxs.map((tx) => (
+            {pageTxs.map((tx) => {
+              const needsPrice = needPriceIds.has(tx.id);
+              const rowClass = [
+                tx.excluded ? "row-excluded" : "",
+                needsPrice ? "row-needs-price" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return (
               <tr
                 key={tx.id}
-                className={tx.excluded ? "row-excluded" : undefined}
+                className={rowClass || undefined}
               >
                 <td>
                   <input
@@ -215,8 +240,9 @@ export function ReviewLedger() {
                     }
                   />
                 </td>
-                <td className="muted">
+                <td className={needsPrice ? "needs-price" : "muted"}>
                   {tx.priceSource ?? "—"}
+                  {needsPrice ? ` · ${t("price_needs_fix")}` : ""}
                   <div className="tiny">
                     {tx.source}
                     {tx.exchange ? ` · ${tx.exchange}` : ""}
@@ -242,7 +268,8 @@ export function ReviewLedger() {
                   <div className="muted tiny">{formatJpy(tx.jpyValue)}</div>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

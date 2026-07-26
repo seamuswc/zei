@@ -35,6 +35,8 @@ export interface CryptoTx {
   feeJpy?: number;
   source: TxSource;
   exchange?: string;
+  /** Stable venue id (e.g. bitflyer) stamped on live exchange sync — used for unlink wipe. */
+  exchangeId?: string;
   /** Wallet address when imported via live wallet sync. */
   walletAddress?: string;
   note?: string;

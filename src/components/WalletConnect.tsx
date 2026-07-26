@@ -92,11 +92,18 @@ export function WalletConnect() {
           t("wallet_resolved", { ens, address: syncedAddress }),
         );
       }
+      const chainLabel =
+        typeof data.chainLabel === "string" && data.chainLabel
+          ? data.chainLabel
+          : "Ethereum mainnet";
+      const okLine = t("wallet_sync_ok", {
+        chain: chainLabel,
+        n: Number(data.count ?? txs.length),
+      });
       setStatus(
-        t("wallet_sync_ok", {
-          chain: String(data.chain ?? ""),
-          n: Number(data.count ?? txs.length),
-        }),
+        data.truncated
+          ? `${okLine} ${t("wallet_history_truncated")}`
+          : okLine,
       );
       setAddress("");
     } catch (e) {

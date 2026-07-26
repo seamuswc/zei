@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { fetchLiveWalletTxs } from "@/lib/import/wallet-live";
 import { EnsResolveError } from "@/lib/ens";
+import { getCurrentUser } from "@/lib/auth";
+import { rateLimit, pruneRateLimits } from "@/lib/rate-limit";
 import {
   apiJsonError,
   apiT,
@@ -9,6 +11,14 @@ import {
 } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
+
+function clientIp(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 function ensErrorKey(code: EnsResolveError["code"]): ApiMsgKey {
   switch (code) {
@@ -23,6 +33,27 @@ function ensErrorKey(code: EnsResolveError["code"]): ApiMsgKey {
 }
 
 export async function POST(req: Request) {
+  const ip = clientIp(req);
+  const user = await getCurrentUser();
+  // Logged-in: moderate; guests: heavy IP throttle (sync hits Etherscan).
+  const rl = user
+    ? rateLimit(`wallet-sync:user:${user.id}`, 30, 60_000)
+    : rateLimit(`wallet-sync:ip:${ip}`, 4, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: apiT(localeFromRequest(req), "too_many", {
+          sec: rl.retryAfterSec ?? 60,
+        }),
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSec ?? 60) },
+      },
+    );
+  }
+  if (Math.random() < 0.05) pruneRateLimits();
+
   try {
     const body = (await req.json()) as {
       address?: string;
@@ -45,6 +76,8 @@ export async function POST(req: Request) {
       address: result.address,
       ens: result.ens ?? null,
       chain: result.chain,
+      chainLabel: result.chainLabel,
+      truncated: result.truncated,
       count: result.txs.length,
       txs: result.txs,
     });

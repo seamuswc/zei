@@ -43,6 +43,12 @@ function migrate(db: Database.Database) {
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL,
+      reset_at INTEGER NOT NULL
+    );
   `);
 }
 
@@ -110,6 +116,12 @@ export function getDb(): Database.Database {
       purpose TEXT NOT NULL,
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL,
+      reset_at INTEGER NOT NULL
     );
   `);
   migrate(_db);

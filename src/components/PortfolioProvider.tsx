@@ -20,41 +20,16 @@ import { matchTransfers } from "@/lib/tax/transfers";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 import { applyLossCarrySeries } from "@/lib/tax/loss-carry";
 import { filingTaxYears } from "@/lib/billing";
+import { mergeLedgerById } from "@/lib/ledger-merge";
+import {
+  exchangeTxMatchesId,
+  resolveExchangeLinkId,
+} from "@/lib/tax/exchange-links";
 
 const LINKS_STORAGE_KEY = "zei_linked_accounts";
 const LEDGER_STORAGE_KEY = "zei_local_ledger";
-
-/** Map ledger `exchange` labels (or ids) → link badge ids. */
-const EXCHANGE_LINK_IDS: Record<string, string> = {
-  bitflyer: "bitflyer",
-  coincheck: "coincheck",
-  gmo: "gmo",
-  "gmo coin": "gmo",
-  bitbank: "bitbank",
-  "binance-jp": "binance-jp",
-  "binance japan": "binance-jp",
-  zaif: "zaif",
-  binance: "binance",
-  bybit: "bybit",
-  okx: "okx",
-  kraken: "kraken",
-  kucoin: "kucoin",
-  bitget: "bitget",
-  gateio: "gateio",
-  "gate.io": "gateio",
-  gate: "gateio",
-  mexc: "mexc",
-  cryptocom: "cryptocom",
-  "crypto.com": "cryptocom",
-  coinbase: "coinbase",
-  htx: "htx",
-  huobi: "htx",
-};
-
-function resolveExchangeLinkId(raw: string): string | null {
-  const key = raw.trim().toLowerCase();
-  return EXCHANGE_LINK_IDS[key] ?? null;
-}
+/** Earliest year shown in the year picker (Japan crypto-tax era). */
+const YEAR_FLOOR = 2017;
 
 type StoredLinks = {
   v: 1;
@@ -156,7 +131,10 @@ function linksFromTxs(txs: CryptoTx[]): {
     // Prefer stamped address (any source — wraps/transfers may keep the stamp).
     const stamped = t.walletAddress?.trim().toLowerCase();
     if (stamped) wallets.add(stamped);
-    if (t.source === "exchange" && t.exchange) {
+    if (t.exchangeId) {
+      const id = resolveExchangeLinkId(t.exchangeId) ?? t.exchangeId;
+      exchanges.add(id);
+    } else if (t.source === "exchange" && t.exchange) {
       const id = resolveExchangeLinkId(t.exchange);
       if (id) exchanges.add(id);
     }
@@ -234,6 +212,7 @@ interface PortfolioState {
     otherIncomeJpy: number;
     incomeProvided: boolean;
     year: number;
+    mergeWithLocal?: boolean;
   }) => void;
   setTaxYears: (rows: YearCarryRow[]) => void;
 }
@@ -404,6 +383,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   // Continuous calendar span (min tx year → max(tx year, this calendar year))
   // so gaps like 2021–2023 stay selectable even with no txs (empty results).
+  // Floor at YEAR_FLOOR so the picker does not extend into pre-crypto-tax noise.
   const availableYears = useMemo(() => {
     const calendarYear = new Date().getFullYear();
     let min: number | null = null;
@@ -417,6 +397,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     if (min == null) min = Math.min(year, calendarYear);
     min = Math.min(min, year);
     max = Math.max(max, year, calendarYear);
+    min = Math.max(YEAR_FLOOR, min);
+    if (min > max) min = max;
     const years: number[] = [];
     for (let y = max; y >= min; y--) years.push(y);
     return years;
@@ -537,14 +519,29 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     [flushLinks],
   );
 
-  /** Clear link badge only — ledger / tax calc stays untouched. */
+  /** Unlink exchange badge and remove that venue’s imported ledger rows. */
   const unlinkExchange = useCallback(
     (id: string) => {
-      const next = linksSnapshotRef.current.linkedExchanges.filter(
-        (x) => x !== id,
+      const target = id.trim().toLowerCase();
+      if (!target) return;
+      const remaining = linksSnapshotRef.current.linkedExchanges.filter(
+        (x) => x !== id && x.toLowerCase() !== target,
       );
-      setLinkedExchanges(next);
-      flushLinks({ linkedExchanges: next });
+      const clearUnstampedExchangeSource = remaining.length === 0;
+      setLinkedExchanges(remaining);
+      flushLinks({ linkedExchanges: remaining });
+      setTxs((prev) => {
+        const filtered = prev.filter(
+          (t) =>
+            !exchangeTxMatchesId(t, target, {
+              clearUnstampedExchangeSource,
+            }),
+        );
+        if (filtered.length === prev.length) return prev;
+        const collapsed = collapseWraps(matchTransfers(filtered).txs);
+        setTaxYears(recomputeLocalYears(collapsed));
+        return collapsed;
+      });
     },
     [flushLinks],
   );
@@ -588,9 +585,20 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       otherIncomeJpy: number;
       incomeProvided: boolean;
       year: number;
+      /** When set, merge with current local txs instead of replacing. */
+      mergeWithLocal?: boolean;
     }) => {
       serverHydratedRef.current = true;
-      commitTxs(data.txs);
+      if (data.mergeWithLocal) {
+        setTxs((prev) => {
+          const merged = mergeLedgerById(prev, data.txs);
+          const collapsed = collapseWraps(matchTransfers(merged).txs);
+          setTaxYears(recomputeLocalYears(collapsed));
+          return collapsed;
+        });
+      } else {
+        commitTxs(data.txs);
+      }
       setOtherIncomeJpyState(data.otherIncomeJpy);
       setIncomeProvided(data.incomeProvided);
       setYear(data.year);

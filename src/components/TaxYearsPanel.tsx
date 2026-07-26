@@ -13,11 +13,11 @@ export function TaxYearsPanel() {
   if (!taxYears.length) return null;
 
   return (
-    <section className="income" id="years">
+    <section className="income years-panel--planning" id="years">
       <div className="income__intro">
         <p className="import-kicker">{t("years_kicker")}</p>
         <h2>{t("years_title")}</h2>
-        <p>{t("years_sub")}</p>
+        <p className="years-planning-note">{t("years_sub")}</p>
       </div>
       <div className="table-wrap">
         <table>

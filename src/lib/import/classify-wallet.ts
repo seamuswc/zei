@@ -377,6 +377,29 @@ function classifyHashGroup(
       continue;
     }
 
+    // One-sided unknown counterparty: prefer transfer_* over buy/sell.
+    // Low-confidence buy/sell inflated gains; Review can reclassify if needed.
+    const lowConfidence =
+      !label &&
+      (leg.knownAsset === false ||
+        !(leg.jpyValue > 0) ||
+        leg.priceSource === "unknown");
+    if (lowConfidence) {
+      const side: TxSide =
+        leg.direction === "in" ? "transfer_in" : "transfer_out";
+      out.push(
+        toTx(leg, side, {
+          note: withAutoNote(
+            leg.note,
+            leg.direction === "in"
+              ? "unknown inbound → transfer_in (check Review)"
+              : "unknown outbound → transfer_out (check Review)",
+          ),
+        }),
+      );
+      continue;
+    }
+
     const side: TxSide = leg.direction === "in" ? "buy" : "sell";
     out.push(toTx(leg, side));
   }
@@ -417,6 +440,21 @@ export function classifyWalletLegs(
   for (const leg of noHash) {
     if (leg.isFee) {
       txs.push(toTx(leg, "fee"));
+      continue;
+    }
+    const lowConfidence =
+      leg.knownAsset === false ||
+      !(leg.jpyValue > 0) ||
+      leg.priceSource === "unknown";
+    if (lowConfidence) {
+      txs.push(
+        toTx(leg, leg.direction === "in" ? "transfer_in" : "transfer_out", {
+          note: withAutoNote(
+            leg.note,
+            "low-confidence one-sided (check Review)",
+          ),
+        }),
+      );
       continue;
     }
     txs.push(toTx(leg, leg.direction === "in" ? "buy" : "sell"));
