@@ -59,12 +59,15 @@ export const messages = {
       "0xアドレスまたはENS名（例: vitalik.eth）を貼り付けてください。ENSはサーバー側で解決します。APIキーは不要です。1件終わってから次を追加できます。DeFiは自動ラベル付け（スワップ・ラップ・自己送金など）します。Reviewで確認・修正してください。",
     wallet_linked: "接続済み: {address}",
     wallet_linked_ens: "接続済み: {ens} → {address}",
+    wallet_linked_list: "接続済みウォレット",
     wallet_resolved: "解決済み: {ens} → {address}",
     wallet_ens_invalid:
       "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
     wallet_sync_ok:
       "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
     unlink: "解除",
+    unlink_kept_txs:
+      "解除しました — 取込済みの取引は確認・税額結果に残ります。消すときは「台帳をクリア」。",
 
     exchange_kicker: "03 · 取引所 · 読み取り専用API",
     exchange_title: "取引所を連携（かんたん）",
@@ -79,7 +82,8 @@ export const messages = {
     exchange_passphrase: "APIパスフレーズ（OKX / KuCoin）",
     exchange_connect: "読み取り同期",
     exchange_syncing: "同期中…",
-    exchange_linked: "連携済み",
+    exchange_linked: "連携済み取引所",
+    exchange_linked_item: "連携済み: {name}",
     exchange_docs: "権限のヘルプ",
     exchange_csv_alt: "年間フル履歴は左のCSVアップロードも使えます。",
     exchange_synced: "{name} · {n}件を取り込みました",
@@ -126,7 +130,9 @@ export const messages = {
     results_title: "{year}年 暗号資産の雑所得",
     results_year: "年度",
     results_export: "税理士向けに出力",
-    results_clear: "すべてクリア",
+    results_clear: "台帳をクリア",
+    results_clear_hint:
+      "ウォレット／取引所の「解除」では雑所得は消えません。取込データを消すときは「台帳をクリア」を使います。",
     results_active: "有効な取引",
     results_matched: "振替マッチ",
     results_income: "報酬・受取",
@@ -183,6 +189,7 @@ export const messages = {
     review_exclude: "除外",
     review_include: "含める",
     review_delete: "削除",
+    review_clear: "台帳をクリア",
     review_auto: "自動",
     review_matched: "マッチ済",
     ledger_showing: "{from}–{to} / 全{total}件",
@@ -374,12 +381,15 @@ export const messages = {
       "Paste a 0x address or ENS name (e.g. vitalik.eth). ENS is resolved on the server — no API key needed. Add another after this sync completes. DeFi is auto-labeled when possible (swaps, wraps, self-transfers); check Review.",
     wallet_linked: "Linked: {address}",
     wallet_linked_ens: "Linked: {ens} → {address}",
+    wallet_linked_list: "Linked wallets",
     wallet_resolved: "Resolved: {ens} → {address}",
     wallet_ens_invalid:
       "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
     wallet_sync_ok:
       "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
     unlink: "Unlink",
+    unlink_kept_txs:
+      "Unlinked — imported transactions stay in Review / results until you clear them.",
 
     exchange_kicker: "03 · Exchange · read-only API",
     exchange_title: "Link exchange (easiest)",
@@ -394,7 +404,8 @@ export const messages = {
     exchange_passphrase: "API passphrase (OKX / KuCoin)",
     exchange_connect: "Sync read-only",
     exchange_syncing: "Syncing…",
-    exchange_linked: "Linked",
+    exchange_linked: "Linked exchanges",
+    exchange_linked_item: "Linked: {name}",
     exchange_docs: "Permission help",
     exchange_csv_alt: "For full-year history you can also upload CSV (left panel).",
     exchange_synced: "{name} · imported {n} rows",
@@ -443,7 +454,9 @@ export const messages = {
     results_title: "{year} crypto 雑所得",
     results_year: "Year",
     results_export: "Export for accountant",
-    results_clear: "Clear all",
+    results_clear: "Clear ledger",
+    results_clear_hint:
+      "Unlinking a wallet/exchange does not remove 雑所得. Use Clear ledger to wipe imported transactions and results.",
     results_active: "Active txs",
     results_matched: "Matched transfers",
     results_income: "Income / rewards",
@@ -500,6 +513,7 @@ export const messages = {
     review_exclude: "Exclude",
     review_include: "Include",
     review_delete: "Delete",
+    review_clear: "Clear ledger",
     review_auto: "auto",
     review_matched: "matched",
     ledger_showing: "Showing {from}–{to} of {total}",

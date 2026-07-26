@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,6 +20,102 @@ import { matchTransfers } from "@/lib/tax/transfers";
 import { collapseWraps } from "@/lib/tax/collapse-wraps";
 import { applyLossCarrySeries } from "@/lib/tax/loss-carry";
 import { filingTaxYears } from "@/lib/billing";
+
+const LINKS_STORAGE_KEY = "zei_linked_accounts";
+
+/** Map ledger `exchange` labels (or ids) → link badge ids. */
+const EXCHANGE_LINK_IDS: Record<string, string> = {
+  bitflyer: "bitflyer",
+  coincheck: "coincheck",
+  gmo: "gmo",
+  "gmo coin": "gmo",
+  bitbank: "bitbank",
+  "binance-jp": "binance-jp",
+  "binance japan": "binance-jp",
+  zaif: "zaif",
+  binance: "binance",
+  bybit: "bybit",
+  okx: "okx",
+  kraken: "kraken",
+  kucoin: "kucoin",
+};
+
+function resolveExchangeLinkId(raw: string): string | null {
+  const key = raw.trim().toLowerCase();
+  return EXCHANGE_LINK_IDS[key] ?? null;
+}
+
+type StoredLinks = {
+  v: 1;
+  linkedWallets: string[];
+  walletEnsLabels: Record<string, string>;
+  linkedExchanges: string[];
+};
+
+function readStoredLinks(): StoredLinks | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LINKS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredLinks>;
+    const wallets = Array.isArray(parsed.linkedWallets)
+      ? parsed.linkedWallets
+          .filter((a): a is string => typeof a === "string")
+          .map((a) => a.trim().toLowerCase())
+          .filter(Boolean)
+      : [];
+    const exchanges = Array.isArray(parsed.linkedExchanges)
+      ? parsed.linkedExchanges.filter(
+          (id): id is string => typeof id === "string" && !!id,
+        )
+      : [];
+    const ens: Record<string, string> = {};
+    if (parsed.walletEnsLabels && typeof parsed.walletEnsLabels === "object") {
+      for (const [k, v] of Object.entries(parsed.walletEnsLabels)) {
+        if (typeof v === "string" && v.trim()) {
+          ens[k.trim().toLowerCase()] = v.trim().toLowerCase();
+        }
+      }
+    }
+    return {
+      v: 1,
+      linkedWallets: [...new Set(wallets)],
+      walletEnsLabels: ens,
+      linkedExchanges: [...new Set(exchanges)],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredLinks(data: StoredLinks) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LINKS_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+/** Recover link badges from ledger txs when storage was never written. */
+function linksFromTxs(txs: CryptoTx[]): {
+  wallets: string[];
+  exchanges: string[];
+} {
+  const wallets = new Set<string>();
+  const exchanges = new Set<string>();
+  for (const t of txs) {
+    if (t.source === "wallet" && t.walletAddress) {
+      const a = t.walletAddress.trim().toLowerCase();
+      if (a) wallets.add(a);
+    }
+    if (t.source === "exchange" && t.exchange) {
+      const id = resolveExchangeLinkId(t.exchange);
+      if (id) exchanges.add(id);
+    }
+  }
+  return { wallets: [...wallets], exchanges: [...exchanges] };
+}
 
 interface PortfolioState {
   txs: CryptoTx[];
@@ -88,6 +186,60 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     Record<string, string>
   >({});
   const [linkedExchanges, setLinkedExchanges] = useState<string[]>([]);
+  const [linksReady, setLinksReady] = useState(false);
+  /** True once localStorage had an entry (including empty arrays after unlink). */
+  const hadStoredLinksRef = useRef(false);
+  const seededFromTxsRef = useRef(false);
+
+  // Restore linked accounts from localStorage (survives refresh).
+  useEffect(() => {
+    const stored = readStoredLinks();
+    if (stored) {
+      hadStoredLinksRef.current = true;
+      setLinkedWallets(stored.linkedWallets);
+      setWalletEnsLabels(stored.walletEnsLabels);
+      setLinkedExchanges(stored.linkedExchanges);
+      setConnectedWallet(
+        stored.linkedWallets[stored.linkedWallets.length - 1],
+      );
+    }
+    setLinksReady(true);
+  }, []);
+
+  // Persist link badges whenever they change.
+  // Skip writing an empty placeholder before one-time seed-from-txs can run.
+  useEffect(() => {
+    if (!linksReady) return;
+    if (
+      !hadStoredLinksRef.current &&
+      linkedWallets.length === 0 &&
+      linkedExchanges.length === 0
+    ) {
+      return;
+    }
+    hadStoredLinksRef.current = true;
+    writeStoredLinks({
+      v: 1,
+      linkedWallets,
+      walletEnsLabels,
+      linkedExchanges,
+    });
+  }, [linksReady, linkedWallets, walletEnsLabels, linkedExchanges]);
+
+  // One-time recovery: if user never had stored links, rebuild badges from ledger.
+  useEffect(() => {
+    if (!linksReady || hadStoredLinksRef.current || seededFromTxsRef.current) {
+      return;
+    }
+    if (!txs.length) return;
+    const derived = linksFromTxs(txs);
+    seededFromTxsRef.current = true;
+    if (!derived.wallets.length && !derived.exchanges.length) return;
+    hadStoredLinksRef.current = true;
+    setLinkedWallets(derived.wallets);
+    setLinkedExchanges(derived.exchanges);
+    setConnectedWallet(derived.wallets[derived.wallets.length - 1]);
+  }, [linksReady, txs]);
 
   // Continuous calendar span (min tx year → max(tx year, this calendar year))
   // so gaps like 2021–2023 stay selectable even with no txs (empty results).
@@ -138,6 +290,13 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setLinkedWallets([]);
     setWalletEnsLabels({});
     setLinkedExchanges([]);
+    hadStoredLinksRef.current = true;
+    writeStoredLinks({
+      v: 1,
+      linkedWallets: [],
+      walletEnsLabels: {},
+      linkedExchanges: [],
+    });
   }, []);
 
   const setOtherIncomeJpy = useCallback((n: number) => {
@@ -145,6 +304,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setIncomeProvided(true);
   }, []);
 
+  /** Add/update one wallet link — never wipes other linked wallets. */
   const markWalletLinked = useCallback((address: string, ens?: string) => {
     const a = address.trim().toLowerCase();
     if (!a) return;
@@ -172,6 +332,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /** Add/update one exchange link — never wipes other linked exchanges. */
   const markExchangeLinked = useCallback((id: string) => {
     setLinkedExchanges((prev) =>
       prev.includes(id) ? prev : [...prev, id],

@@ -129,6 +129,8 @@ export function TaxResults() {
         </div>
       </div>
 
+      <p className="field-hint results-clear-hint">{t("results_clear_hint")}</p>
+
       {locked && (
         <div className="paywall">
           <p className="import-kicker">{t("freemium_locked_kicker")}</p>

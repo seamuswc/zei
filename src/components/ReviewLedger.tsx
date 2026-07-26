@@ -23,7 +23,7 @@ const SIDES: TxSide[] = [
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 0] as const;
 
 export function ReviewLedger() {
-  const { txs, updateTx, removeTx, toggleExclude } = usePortfolio();
+  const { txs, updateTx, removeTx, toggleExclude, clearTxs } = usePortfolio();
   const { t } = useI18n();
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(0);
@@ -45,9 +45,20 @@ export function ReviewLedger() {
   return (
     <section className="ledger" id="review">
       <div className="ledger__head">
-        <p className="import-kicker">{t("review_kicker")}</p>
-        <h2>{t("review_title")}</h2>
-        <p>{t("review_sub")}</p>
+        <div className="ledger__head-row">
+          <div>
+            <p className="import-kicker">{t("review_kicker")}</p>
+            <h2>{t("review_title")}</h2>
+            <p>{t("review_sub")}</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            onClick={clearTxs}
+          >
+            {t("review_clear")}
+          </button>
+        </div>
       </div>
       <div className="ledger-pager">
         <p className="ledger-pager__meta">

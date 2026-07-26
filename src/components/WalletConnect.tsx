@@ -164,7 +164,7 @@ export function WalletConnect() {
       {error && <p className="status-err-line">{error}</p>}
 
       {linkedWallets.length > 0 && (
-        <ul className="wallet-linked-list">
+        <ul className="link-list" aria-label={t("wallet_linked_list")}>
           {linkedWallets.map((w) => {
             const ens = walletEnsLabels[w.toLowerCase()];
             const label = ens
@@ -174,12 +174,17 @@ export function WalletConnect() {
                 })
               : t("wallet_linked", { address: shortAddr(w) });
             return (
-              <li key={w}>
+              <li key={w} className="link-list__row">
                 <span>{label}</span>
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
-                  onClick={() => unlinkWallet(w)}
+                  onClick={() => {
+                    unlinkWallet(w);
+                    setStatus(t("unlink_kept_txs"));
+                    setError(null);
+                    setResolvedLine(null);
+                  }}
                   disabled={busy}
                 >
                   {t("unlink")}

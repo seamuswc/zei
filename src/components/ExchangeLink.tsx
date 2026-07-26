@@ -9,8 +9,17 @@ import { useI18n } from "./I18nProvider";
 const japanExchanges = EXCHANGES.filter((e) => e.region === "Japan");
 const overseasExchanges = EXCHANGES.filter((e) => e.region === "Overseas");
 
+function exchangeName(id: string): string {
+  return EXCHANGES.find((e) => e.id === id)?.name ?? id;
+}
+
 export function ExchangeLink() {
-  const { addTxs, markExchangeLinked } = usePortfolio();
+  const {
+    addTxs,
+    markExchangeLinked,
+    linkedExchanges,
+    unlinkExchange,
+  } = usePortfolio();
   const { t } = useI18n();
   const [selected, setSelected] = useState("bitflyer");
   const [apiKey, setApiKey] = useState("");
@@ -64,6 +73,13 @@ export function ExchangeLink() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function onUnlink(id: string) {
+    unlinkExchange(id);
+    setStatus(t("unlink_kept_txs"));
+    setError(null);
+    setWarning(null);
   }
 
   return (
@@ -178,6 +194,26 @@ export function ExchangeLink() {
       {status && <p className="status-ok">{status}</p>}
       {warning && <p className="status-warn">{warning}</p>}
       {error && <p className="status-err-line">{error}</p>}
+
+      {linkedExchanges.length > 0 && (
+        <ul className="link-list" aria-label={t("exchange_linked")}>
+          {linkedExchanges.map((id) => (
+            <li key={id} className="link-list__row">
+              <span>
+                {t("exchange_linked_item", { name: exchangeName(id) })}
+              </span>
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => onUnlink(id)}
+                disabled={busy}
+              >
+                {t("unlink")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
