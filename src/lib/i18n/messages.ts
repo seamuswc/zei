@@ -152,10 +152,12 @@ export const messages = {
       "参考値です。確定申告では税理士／ご本人が全所得を合算します。今年の暗号資産所得: {gain}",
     income_sketch: " 暗号資産分の税額目安: {tax}。",
 
-    results_empty_kicker: "暗号資産の税額年度",
-    results_empty_title: "ここに雑所得が表示されます",
+    results_empty_kicker: "税額年度",
+    results_empty_title: "雑所得はここに表示されます",
     results_empty_sub:
       "スプレッドシート・ウォレット・取引所を取り込むと、移動平均法で計算します。",
+    results_empty_note: "暗号資産の雑所得のみ — 確定申告の代わりではありません。",
+    results_empty_cta: "取込へ",
     results_kicker: "暗号資産のみ · 移動平均法",
     results_title: "{year}年 暗号資産の雑所得",
     results_year: "年度",
@@ -537,10 +539,12 @@ export const messages = {
       "Illustrative only. Your accountant / 確定申告 combines all income. Crypto gain this year: {gain}",
     income_sketch: " Rough crypto tax sketch: {tax}.",
 
-    results_empty_kicker: "Crypto tax year",
-    results_empty_title: "Your crypto 雑所得 appears here",
+    results_empty_kicker: "Tax year",
+    results_empty_title: "Your crypto 雑所得 will show here",
     results_empty_sub:
-      "Import spreadsheets, live wallets, or live exchanges — we run 移動平均法 for crypto only.",
+      "Import a spreadsheet, wallet, or exchange — we run 移動平均法.",
+    results_empty_note: "Crypto 雑所得 only — not a full 確定申告.",
+    results_empty_cta: "Go to import",
     results_kicker: "Crypto only · 移動平均法",
     results_title: "{year} crypto 雑所得",
     results_year: "Year",

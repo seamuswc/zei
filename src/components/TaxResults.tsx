@@ -59,9 +59,12 @@ export function TaxResults() {
         <p className="import-kicker">{t("results_empty_kicker")}</p>
         <h2>{t("results_empty_title")}</h2>
         <p>{t("results_empty_sub")}</p>
-        <p className="results-honesty" role="note">
-          {t("results_honesty")}
+        <p className="muted" role="note">
+          {t("results_empty_note")}
         </p>
+        <a className="btn btn--solid" href="#import">
+          {t("results_empty_cta")}
+        </a>
       </section>
     );
   }

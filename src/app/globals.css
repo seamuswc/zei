@@ -1129,18 +1129,35 @@ select {
 }
 
 .results--empty {
-  padding: 3rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3.25rem 1.5rem;
   border: 1px dashed var(--line);
   background: rgba(255, 255, 255, 0.45);
   text-align: center;
 }
 
 .results--empty h2 {
-  margin-inline: auto;
+  margin: 0.2rem 0 0.5rem;
+  max-width: 28ch;
 }
 
-.results--empty p:last-child {
-  margin-inline: auto;
+.results--empty > p {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--ink-soft);
+}
+
+.results--empty > .muted {
+  margin-top: 0.45rem;
+  max-width: 40ch;
+  font-size: 0.92rem;
+}
+
+.results--empty .btn {
+  margin-top: 1.35rem;
+  text-decoration: none;
 }
 
 .results__toolbar {
