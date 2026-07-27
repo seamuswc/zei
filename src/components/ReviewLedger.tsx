@@ -196,9 +196,9 @@ export function ReviewLedger() {
     if (!clear) setBulkJpy("");
   }
 
-  function bulkExclude(excluded: boolean) {
+  function bulkIgnore() {
     if (selectedList.length === 0) return;
-    setExcludedMany(selectedList, excluded);
+    setExcludedMany(selectedList, true);
   }
 
   function bulkDelete() {
@@ -325,17 +325,9 @@ export function ReviewLedger() {
             type="button"
             className="btn btn--ghost btn--sm"
             disabled={selectedCount === 0}
-            onClick={() => bulkExclude(true)}
+            onClick={bulkIgnore}
           >
-            {t("ledger_bulk_exclude")}
-          </button>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            disabled={selectedCount === 0}
-            onClick={() => bulkExclude(false)}
-          >
-            {t("ledger_bulk_include")}
+            {t("ledger_bulk_ignore")}
           </button>
           <button
             type="button"
@@ -416,7 +408,6 @@ export function ReviewLedger() {
               <th>{t("th_jpy")}</th>
               <th>{t("th_fee")}</th>
               <th>{t("th_cost_override")}</th>
-              <th className="col-price-src">{t("th_price_src")}</th>
               <th>{t("th_actions")}</th>
             </tr>
           </thead>
@@ -506,6 +497,13 @@ export function ReviewLedger() {
                         })
                       }
                     />
+                    {needsPrice && (
+                      <div className="price-src-line">
+                        <span className="badge-needs-price">
+                          {t("price_needs_fix")}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td>
                     <input
@@ -539,26 +537,6 @@ export function ReviewLedger() {
                       }
                     />
                   </td>
-                  <td
-                    className={
-                      needsPrice ? "col-price-src needs-price" : "col-price-src muted"
-                    }
-                  >
-                    <div className="price-src-line">
-                      <span className="price-src-label">
-                        {tx.priceSource ?? "—"}
-                      </span>
-                      {needsPrice && (
-                        <span className="badge-needs-price">
-                          {t("price_needs_fix")}
-                        </span>
-                      )}
-                    </div>
-                    <div className="tiny price-src-notes">
-                      {tx.source}
-                      {tx.exchange ? ` · ${tx.exchange}` : ""}
-                    </div>
-                  </td>
                   <td>
                     <div className="row-actions">
                       <button
@@ -566,7 +544,7 @@ export function ReviewLedger() {
                         className="btn btn--ghost btn--sm"
                         onClick={() => toggleExclude(tx.id)}
                       >
-                        {tx.excluded ? t("review_include") : t("review_exclude")}
+                        {tx.excluded ? t("review_unignore") : t("review_ignore")}
                       </button>
                       <button
                         type="button"

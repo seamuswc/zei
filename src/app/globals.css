@@ -1196,8 +1196,9 @@ select {
 }
 
 .row-excluded {
-  opacity: 0.45;
+  opacity: 0.38;
   text-decoration: line-through;
+  color: color-mix(in oklab, var(--ink) 55%, transparent);
 }
 
 .cell-input {
@@ -1342,10 +1343,7 @@ select {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.45rem;
-}
-
-.price-src-label {
-  word-break: break-word;
+  margin-top: 0.25rem;
 }
 
 .badge-needs-price {
@@ -1360,10 +1358,6 @@ select {
   letter-spacing: 0.02em;
   line-height: 1.3;
   white-space: nowrap;
-}
-
-.price-src-notes {
-  word-break: break-word;
 }
 
 .match-tag {
@@ -1546,13 +1540,6 @@ select {
 
 .ledger-scroll .col-date {
   min-width: 8.25rem;
-}
-
-.ledger-scroll .col-price-src {
-  min-width: 11.5rem;
-  max-width: 18rem;
-  white-space: normal;
-  vertical-align: top;
 }
 
 .ledger-scroll .col-jpy--needs {

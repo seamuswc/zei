@@ -339,7 +339,6 @@ export function TaxResults() {
                     <th>{t("th_proceeds")}</th>
                     <th>{t("th_cost")}</th>
                     <th>{t("th_gain")}</th>
-                    <th>{t("th_price_src")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -355,14 +354,19 @@ export function TaxResults() {
                         <td>{kindLabel(d.kind)}</td>
                         <td>{d.asset}</td>
                         <td>{formatQty(d.quantity)}</td>
-                        <td>{formatJpy(d.proceedsJpy)}</td>
+                        <td className={badPrice ? "needs-price" : undefined}>
+                          {formatJpy(d.proceedsJpy)}
+                          {badPrice ? (
+                            <div className="price-src-line">
+                              <span className="badge-needs-price">
+                                {t("price_needs_fix")}
+                              </span>
+                            </div>
+                          ) : null}
+                        </td>
                         <td>{formatJpy(d.costBasisJpy)}</td>
                         <td className={d.gainJpy >= 0 ? "gain" : "loss"}>
                           {formatJpy(d.gainJpy)}
-                        </td>
-                        <td className={badPrice ? "needs-price" : "muted"}>
-                          {d.priceSource ?? "—"}
-                          {badPrice ? ` · ${t("price_needs_fix")}` : ""}
                         </td>
                       </tr>
                     );

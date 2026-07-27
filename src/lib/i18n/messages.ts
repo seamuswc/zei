@@ -183,11 +183,11 @@ export const messages = {
     results_honesty:
       "暗号資産の雑所得のみ — 確定申告の代わりではありません。DeFi等は「確認」で価格・分類を見直してから出力してください。",
     export_blocked_prices:
-      "出力できません: この年に円換算不明／¥0の売却・受取が{n}件あります。確認画面で価格を入力するか除外してください。",
+      "出力できません: この年に円換算不明／¥0の売却・受取が{n}件あります。確認画面で価格を入力するか無視してください。",
     export_fix_prices_cta: "確認画面で修正",
     price_needs_fix: "要価格",
     review_needs_price:
-      "円換算不明または¥0の売却・受取が{n}件あります。税理士ZIP出力前に修正または除外してください。",
+      "円換算不明または¥0の売却・受取が{n}件あります。税理士ZIP出力前に修正または無視してください。",
     review_needs_review:
       "要確認: {n}件（要価格、または自動分類の振替・不明行）。下の「要確認のみ」で絞り込めます。",
     review_history_truncated:
@@ -214,7 +214,6 @@ export const messages = {
     th_proceeds: "売却価額",
     th_cost: "取得価額",
     th_gain: "所得金額",
-    th_price_src: "円換算根拠",
     th_avg: "平均取得単価",
     th_book: "簿価",
 
@@ -237,8 +236,8 @@ export const messages = {
     th_fee: "手数料円",
     th_cost_override: "取得価額上書き",
     th_actions: "操作",
-    review_exclude: "除外",
-    review_include: "含める",
+    review_ignore: "無視",
+    review_unignore: "無視を解除",
     review_delete: "削除",
     review_auto: "自動",
     review_matched: "マッチ済",
@@ -259,8 +258,7 @@ export const messages = {
     ledger_bulk_jpy_label: "円（一括）",
     ledger_bulk_set_jpy: "選択行に円を設定",
     ledger_bulk_clear_jpy: "円をクリア",
-    ledger_bulk_exclude: "選択を除外",
-    ledger_bulk_include: "選択を含める",
+    ledger_bulk_ignore: "選択を無視",
     ledger_bulk_delete: "選択を削除",
     ledger_bulk_delete_confirm: "選択した{n}件を削除しますか？この操作は元に戻せません。",
     dust_remove: "ゴミ数量を削除",
@@ -582,11 +580,11 @@ export const messages = {
     results_honesty:
       "Crypto 雑所得 only — not a full 確定申告. For DeFi / busy wallets, review prices and classification before export.",
     export_blocked_prices:
-      "Export blocked: {n} sell/income row(s) in this year have unknown or ¥0 JPY. Fix or exclude them in Review.",
+      "Export blocked: {n} sell/income row(s) in this year have unknown or ¥0 JPY. Fix or ignore them in Review.",
     export_fix_prices_cta: "Fix in Review",
     price_needs_fix: "needs price",
     review_needs_price:
-      "{n} sell/income row(s) have unknown or ¥0 JPY. Fix or exclude before accountant ZIP export.",
+      "{n} sell/income row(s) have unknown or ¥0 JPY. Fix or ignore before accountant ZIP export.",
     review_needs_review:
       "{n} row(s) need review (missing price, or auto transfer / uncertain classification). Use “Needs review” below to filter.",
     review_history_truncated:
@@ -613,7 +611,6 @@ export const messages = {
     th_proceeds: "Proceeds",
     th_cost: "Cost",
     th_gain: "Gain",
-    th_price_src: "Price src",
     th_avg: "Avg cost",
     th_book: "Book value",
 
@@ -636,8 +633,8 @@ export const messages = {
     th_fee: "Fee JPY",
     th_cost_override: "Cost override",
     th_actions: "Actions",
-    review_exclude: "Exclude",
-    review_include: "Include",
+    review_ignore: "Ignore",
+    review_unignore: "Unignore",
     review_delete: "Delete",
     review_auto: "auto",
     review_matched: "matched",
@@ -658,8 +655,7 @@ export const messages = {
     ledger_bulk_jpy_label: "JPY (bulk)",
     ledger_bulk_set_jpy: "Set JPY on selected",
     ledger_bulk_clear_jpy: "Clear JPY",
-    ledger_bulk_exclude: "Exclude selected",
-    ledger_bulk_include: "Include selected",
+    ledger_bulk_ignore: "Ignore selected",
     ledger_bulk_delete: "Delete selected",
     ledger_bulk_delete_confirm:
       "Delete {n} selected row(s)? This cannot be undone.",
