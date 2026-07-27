@@ -268,7 +268,11 @@ export function TaxResults() {
         )}
       </div>
 
-      <p className="export-banner" id="export-note">
+      <p
+        className={`export-banner${pricesBlockExport ? " export-banner--warn" : ""}`}
+        id="export-note"
+        role={pricesBlockExport ? "alert" : undefined}
+      >
         {locked
           ? t("freemium_export_locked", filingVars)
           : pricesBlockExport

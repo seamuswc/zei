@@ -769,6 +769,12 @@ select {
   font-size: 0.95rem;
 }
 
+.export-banner--warn {
+  background: color-mix(in oklab, #f59e0b 12%, var(--paper));
+  border-color: color-mix(in oklab, #b45309 40%, var(--line));
+  color: #5c3d0a;
+}
+
 .side--wrap {
   border-color: color-mix(in oklab, var(--jade) 25%, var(--line));
   color: var(--ink-soft);
