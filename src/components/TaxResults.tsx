@@ -59,6 +59,9 @@ export function TaxResults() {
         <p className="import-kicker">{t("results_empty_kicker")}</p>
         <h2>{t("results_empty_title")}</h2>
         <p>{t("results_empty_sub")}</p>
+        <p className="results-honesty" role="note">
+          {t("results_honesty")}
+        </p>
       </section>
     );
   }
@@ -202,6 +205,10 @@ export function TaxResults() {
       </div>
 
       <p className="field-hint results-clear-hint">{t("results_clear_hint")}</p>
+
+      <p className="results-honesty" role="note">
+        {t("results_honesty")}
+      </p>
 
       {pricesBlockExport && (
         <div className="price-warning" role="alert">

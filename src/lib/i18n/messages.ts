@@ -14,6 +14,8 @@ export const messages = {
     lang_toggle: "Language",
 
     wip_banner: "現在準備中です — まだ本番公開前です。見つけた方へ：もう少しお待ちください。",
+    honesty_bar:
+      "ZEIは暗号資産の雑所得の計算補助です。確定申告そのものではなく、申告の代行・税務助言でもありません。DeFiや取引が多いウォレットは「確認」で価格と分類を必ず見直してください。",
     freemium_banner:
       "暗号資産のみ。無料は取込・確認・それより前の年の税額。Proで今年と昨年（{lastYear}年・{thisYear}年）の合計・出力を解除 — 申告・期限後の対応で使う年です。",
     freemium_cta_login: "ログインしてProへ",
@@ -168,6 +170,8 @@ export const messages = {
     results_after_carry: "繰越後（参考・現行法外）",
     results_export_banner:
       "税理士提出用パック: 「税理士向けに出力」でZIPをダウンロード（README・売却明細・期末残高・全取引台帳）。",
+    results_honesty:
+      "暗号資産の雑所得のみ — 確定申告の代わりではありません。DeFi等は「確認」で価格・分類を見直してから出力してください。",
     export_blocked_prices:
       "出力できません: この年に円換算不明／¥0の売却・受取が{n}件あります。確認画面で価格を入力するか除外してください。",
     export_fix_prices_cta: "確認画面で修正",
@@ -244,7 +248,7 @@ export const messages = {
     ledger_bulk_delete_confirm: "選択した{n}件を削除しますか？この操作は元に戻せません。",
 
     footer:
-      "ZEI · 暗号資産の雑所得のみ。確定申告の代わりではありません。税理士向けZIPは「税額年度」→「税理士向けに出力」から。税務・法務・会計の助言ではありません。",
+      "ZEI · 暗号資産の雑所得の計算補助のみ。確定申告そのもの・申告の代行ではありません。DeFi等は「確認」で価格と分類を見直してください。税理士向けZIPは「税額年度」→「税理士向けに出力」。税務・法務・会計の助言ではありません。",
     footer_contact:
       "不具合・ご質問などはお気軽にご連絡ください。通常48時間以内にご返信いたします。",
 
@@ -382,6 +386,8 @@ export const messages = {
 
     wip_banner:
       "Still under construction — not launched yet. If you found this early: hang tight.",
+    honesty_bar:
+      "ZEI helps calculate crypto 雑所得 only — not a full tax return (確定申告), not a filing substitute, and not professional advice. Busy / DeFi wallets: check Review for prices and classification.",
     freemium_banner:
       "Crypto only. Free: import, review, and older years. Pro unlocks this calendar year and last year ({lastYear} and {thisYear}) — the ones that matter for filing / late filing.",
     freemium_cta_login: "Log in for Pro",
@@ -538,6 +544,8 @@ export const messages = {
     results_after_carry: "After carry (planning only)",
     results_export_banner:
       "Tax accountant pack: click Export for accountant to download a ZIP (README + sale detail + lots + full ledger).",
+    results_honesty:
+      "Crypto 雑所得 only — not a full 確定申告. For DeFi / busy wallets, review prices and classification before export.",
     export_blocked_prices:
       "Export blocked: {n} sell/income row(s) in this year have unknown or ¥0 JPY. Fix or exclude them in Review.",
     export_fix_prices_cta: "Fix in Review",
@@ -615,7 +623,7 @@ export const messages = {
       "Delete {n} selected row(s)? This cannot be undone.",
 
     footer:
-      "ZEI · Crypto 雑所得 only — not a full tax return (確定申告). Export ZIP from Tax year → Export for accountant. Not tax advice.",
+      "ZEI · Crypto 雑所得 helper only — not a full tax return (確定申告) or filing substitute. Busy / DeFi wallets: check Review for prices and classification. Export ZIP from Tax year → Export for accountant. Not tax, legal, or accounting advice.",
     footer_contact:
       "Please contact us with bugs, questions, etc. We’ll respond within 48 hours.",
 

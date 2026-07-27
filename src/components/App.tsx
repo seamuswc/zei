@@ -85,6 +85,10 @@ function AppShell() {
             </Suspense>
           </header>
 
+          <div className="honesty-bar" role="note">
+            {t("honesty_bar")}
+          </div>
+
           {process.env.NEXT_PUBLIC_SHOW_WIP_BANNER === "1" && (
             <div className="wip-banner" role="status">
               {t("wip_banner")}

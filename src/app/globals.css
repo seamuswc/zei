@@ -67,6 +67,29 @@ select {
   flex-direction: column;
 }
 
+.honesty-bar {
+  padding: 0.55rem 1.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+  background: color-mix(in oklab, var(--ink) 5%, var(--paper));
+  border-bottom: 1px solid var(--line);
+}
+
+.results-honesty {
+  margin: 0 0 1.15rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  background: color-mix(in oklab, var(--ink) 4%, white);
+  border: 1px solid var(--line);
+}
+
 .wip-banner {
   padding: 0.55rem 1.5rem;
   text-align: center;

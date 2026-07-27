@@ -95,7 +95,7 @@ Same receive EOA on every chain. Needs an injected browser wallet (mobile deep-l
 | Wallet / pay verify | `ETHERSCAN_API_KEY` |
 | Pro USDC | `USDC_RECEIVE_ADDRESS`, `ZEI_PRO_PRICE_USDC` |
 | Local only | `ALLOW_DEV_PAY=1` (shows “Dev: mark paid”) |
-| WIP banner | `NEXT_PUBLIC_SHOW_WIP_BANNER=1` (default off) |
+| WIP banner | `NEXT_PUBLIC_SHOW_WIP_BANNER=1` (default off; “under construction” only — product honesty bar always shows) |
 
 Copy `.env.example` → `.env.local` and fill in.
 
