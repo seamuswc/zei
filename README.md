@@ -123,11 +123,13 @@ Manual run: `ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /us
 
 ### Ops alert emails
 
-Hourly script emails `OPS_ALERT_EMAIL` (default `seamuswconnolly@gmail.com`) via Resend when:
+Hourly script emails **only** `seamuswconnolly@gmail.com` (never `seamus@cryptozei.com`) via Resend when:
 
 - **Daily signups ≥ 10** (Asia/Tokyo day) — once per calendar day  
 - **Total users** crosses 100 / 200 / 300 … (state in `data/ops-alerts-state.json`)  
-- **Etherscan** or **CoinGecko** API credits low (&lt; 15% of limit or &lt; 10 000 remaining) — debounced 12h  
+- **Etherscan** credits low (&lt; 15% or &lt; 10 000 remaining) and/or **time to upgrade** (used ≥ 70% of daily limit or available &lt; 30 000) — Lite→Standard; urgent if used ≥ 90% — debounced 12h (low+upgrade merged into one email)  
+- **CoinGecko** credits low and/or remaining monthly &lt; 20% (Basic→higher) — skip if `/key` fails — debounced 12h (merged)  
+- **Scale soft advice** — total users ≥ 200 or daily signups ≥ 20 — consider larger droplet / watch sync concurrency — debounced 24h  
 
 ```bash
 # From /var/www/zei
@@ -138,7 +140,7 @@ node scripts/ops-alerts.mjs --dry-run # no email / no state write
 # 0 * * * * cd /var/www/zei && /usr/bin/node scripts/ops-alerts.mjs >> /var/log/zei-ops-alerts.log 2>&1
 ```
 
-Needs `.env.local`: `RESEND_API_KEY`, `EMAIL_FROM`, `ETHERSCAN_API_KEY`, `COINGECKO_API_KEY`, optional `OPS_ALERT_EMAIL`.
+Needs `.env.local`: `RESEND_API_KEY`, `EMAIL_FROM`, `ETHERSCAN_API_KEY`, `COINGECKO_API_KEY`, optional `OPS_ALERT_EMAIL` (forced to ops Gmail).
 
 ---
 
