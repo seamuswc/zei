@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { filingTaxYears } from "@/lib/billing";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
@@ -8,6 +8,7 @@ import { useAuth } from "./AuthProvider";
 export function AuthMenu() {
   const { user, isPro, refreshMe, startProPay, setUser } = useAuth();
   const { t } = useI18n();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +23,22 @@ export function AuthMenu() {
     if (q.get("verify") === "bad") setMsg(t("auth_verify_bad"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   async function auth() {
     setBusy(true);
@@ -119,7 +136,7 @@ export function AuthMenu() {
   const filingVars = { lastYear, thisYear };
 
   return (
-    <div className="auth-menu">
+    <div className="auth-menu" ref={rootRef}>
       <button
         type="button"
         className="btn btn--solid btn--sm"
