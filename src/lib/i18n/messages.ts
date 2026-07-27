@@ -203,8 +203,6 @@ export const messages = {
     results_zip_p:
       "税理士向けZIP: 売却明細、期末残高、価格根拠付き台帳、振替マッチ、日本語README。",
     results_download: "税理士パックをダウンロード",
-    results_disposals: "{year}年の譲渡・所得",
-    results_no_disposals: "この年の課税イベントはまだありません。",
     results_lots: "期末残高（移動平均）",
     results_no_lots: "残高なし",
     th_date: "日付",
@@ -229,8 +227,6 @@ export const messages = {
 
     review_kicker: "確認 · すべて編集可",
     review_title: "価格・数量・取得価額を修正",
-    review_sub:
-      "どの欄も変更できます（DeFiの受取・借入・返済の区分も含む）。利息・ステーキング等は「受取」、借入は「借入」、返済は「返済」（所得・売却ではない）。「円」は価額／売却額。「取得価額上書き」は任意です。",
     th_side: "区分",
     th_jpy: "円（価格）",
     th_fee: "手数料円",
@@ -600,8 +596,6 @@ export const messages = {
     results_zip_p:
       "ZIP for your accountant: sale detail, lots, full ledger with price sources, matched transfers, Japanese README.",
     results_download: "Download accountant pack",
-    results_disposals: "Disposals / income in {year}",
-    results_no_disposals: "No taxable events in this year yet.",
     results_lots: "Ending lots (移動平均)",
     results_no_lots: "No open positions.",
     th_date: "Date",
@@ -626,8 +620,6 @@ export const messages = {
 
     review_kicker: "Review · fully editable",
     review_title: "Edit prices, quantities, and cost basis",
-    review_sub:
-      "Change any field (including DeFi sides). Interest/staking → income; loan proceeds → borrow; loan repayment → repay (neither is taxable income/sell). JPY is price/proceeds. Cost override is optional.",
     th_side: "Side",
     th_jpy: "JPY (price)",
     th_fee: "Fee JPY",

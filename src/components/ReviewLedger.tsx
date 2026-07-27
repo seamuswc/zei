@@ -213,9 +213,8 @@ export function ReviewLedger() {
   return (
     <section className="ledger" id="review">
       <div className="ledger__head">
-        <p className="import-kicker">{t("review_kicker")}</p>
-        <h2>{t("review_title")}</h2>
-        <p>{t("review_sub")}</p>
+        <h2>{t("review_kicker")}</h2>
+        <p>{t("review_title")}</p>
         {historyTruncated && (
           <p className="price-warning price-warning--inline" role="status">
             {t("review_history_truncated")}{" "}

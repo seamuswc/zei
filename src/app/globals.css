@@ -1275,10 +1275,6 @@ select {
   color: var(--jade-deep, #0f5c4c);
 }
 
-.dust-remove--results {
-  margin-top: 1.25rem;
-}
-
 .ledger-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1479,18 +1475,11 @@ select {
   font-size: 1.45rem !important;
 }
 
-.split-tables {
-  display: grid;
-  gap: 1.5rem;
+.results-lots {
+  margin-top: 1.25rem;
 }
 
-@media (min-width: 900px) {
-  .split-tables {
-    grid-template-columns: 1.3fr 0.9fr;
-  }
-}
-
-.split-tables h3,
+.results-lots h3,
 .ledger__head h2 {
   font-family: var(--font-display);
 }

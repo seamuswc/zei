@@ -14,8 +14,6 @@ import {
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
-import { RemoveDustButton } from "./RemoveDustButton";
-import type { MessageKey } from "@/lib/i18n/messages";
 
 export function TaxResults() {
   const {
@@ -137,15 +135,6 @@ export function TaxResults() {
       setExportError(e instanceof Error ? e.message : "Export failed");
     } finally {
       setExportBusy(false);
-    }
-  }
-
-  function kindLabel(kind: string) {
-    const key = `kind_${kind}` as MessageKey;
-    try {
-      return t(key);
-    } catch {
-      return kind;
     }
   }
 
@@ -315,99 +304,39 @@ export function TaxResults() {
         </div>
       </div>
 
-      <RemoveDustButton className="dust-remove--results" />
-
       <div
-        className={`split-tables${locked ? " is-blurred" : ""}`}
+        className={`results-lots${locked ? " is-blurred" : ""}`}
         aria-hidden={locked}
       >
-        <div>
-          <h3>{t("results_disposals", { year })}</h3>
-          {locked ? (
-            <p className="muted">{t("freemium_table_locked")}</p>
-          ) : summary.disposals.length === 0 ? (
-            <p className="muted">{t("results_no_disposals")}</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t("th_date")}</th>
-                    <th>{t("th_kind")}</th>
-                    <th>{t("th_asset")}</th>
-                    <th>{t("th_qty")}</th>
-                    <th>{t("th_proceeds")}</th>
-                    <th>{t("th_cost")}</th>
-                    <th>{t("th_gain")}</th>
+        <h3>{t("results_lots")}</h3>
+        {locked ? (
+          <p className="muted">{t("freemium_table_locked")}</p>
+        ) : summary.endingLots.length === 0 ? (
+          <p className="muted">{t("results_no_lots")}</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t("th_asset")}</th>
+                  <th>{t("th_qty")}</th>
+                  <th>{t("th_avg")}</th>
+                  <th>{t("th_book")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.endingLots.map((l) => (
+                  <tr key={l.asset}>
+                    <td>{l.asset}</td>
+                    <td>{formatQty(l.quantity)}</td>
+                    <td>{formatJpy(l.avgCostJpy)}</td>
+                    <td>{formatJpy(l.totalCostJpy)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {summary.disposals.map((d) => {
-                    const badPrice =
-                      d.priceSource === "unknown" || !(d.proceedsJpy > 0);
-                    return (
-                      <tr
-                        key={d.id}
-                        className={badPrice ? "row-needs-price" : undefined}
-                      >
-                        <td>{d.date}</td>
-                        <td>{kindLabel(d.kind)}</td>
-                        <td>{d.asset}</td>
-                        <td>{formatQty(d.quantity)}</td>
-                        <td className={badPrice ? "needs-price" : undefined}>
-                          {formatJpy(d.proceedsJpy)}
-                          {badPrice ? (
-                            <div className="price-src-line">
-                              <span className="badge-needs-price">
-                                {t("price_needs_fix")}
-                              </span>
-                            </div>
-                          ) : null}
-                        </td>
-                        <td>{formatJpy(d.costBasisJpy)}</td>
-                        <td className={d.gainJpy >= 0 ? "gain" : "loss"}>
-                          {formatJpy(d.gainJpy)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h3>{t("results_lots")}</h3>
-          {locked ? (
-            <p className="muted">{t("freemium_table_locked")}</p>
-          ) : summary.endingLots.length === 0 ? (
-            <p className="muted">{t("results_no_lots")}</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t("th_asset")}</th>
-                    <th>{t("th_qty")}</th>
-                    <th>{t("th_avg")}</th>
-                    <th>{t("th_book")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.endingLots.map((l) => (
-                    <tr key={l.asset}>
-                      <td>{l.asset}</td>
-                      <td>{formatQty(l.quantity)}</td>
-                      <td>{formatJpy(l.avgCostJpy)}</td>
-                      <td>{formatJpy(l.totalCostJpy)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </section>
   );
