@@ -1475,11 +1475,6 @@ select {
   font-size: 1.45rem !important;
 }
 
-.results-lots {
-  margin-top: 1.25rem;
-}
-
-.results-lots h3,
 .ledger__head h2 {
   font-family: var(--font-display);
 }

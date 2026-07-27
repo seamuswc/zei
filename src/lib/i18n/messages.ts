@@ -203,8 +203,6 @@ export const messages = {
     results_zip_p:
       "税理士向けZIP: 売却明細、期末残高、価格根拠付き台帳、振替マッチ、日本語README。",
     results_download: "税理士パックをダウンロード",
-    results_lots: "期末残高（移動平均）",
-    results_no_lots: "残高なし",
     th_date: "日付",
     th_kind: "区分",
     th_asset: "資産",
@@ -212,8 +210,6 @@ export const messages = {
     th_proceeds: "売却価額",
     th_cost: "取得価額",
     th_gain: "所得金額",
-    th_avg: "平均取得単価",
-    th_book: "簿価",
 
     years_kicker: "複数年 · 参考のみ",
     years_title: "損失繰越シミュレーション（現行法ではありません）",
@@ -596,8 +592,6 @@ export const messages = {
     results_zip_p:
       "ZIP for your accountant: sale detail, lots, full ledger with price sources, matched transfers, Japanese README.",
     results_download: "Download accountant pack",
-    results_lots: "Ending lots (移動平均)",
-    results_no_lots: "No open positions.",
     th_date: "Date",
     th_kind: "Kind",
     th_asset: "Asset",
@@ -605,8 +599,6 @@ export const messages = {
     th_proceeds: "Proceeds",
     th_cost: "Cost",
     th_gain: "Gain",
-    th_avg: "Avg cost",
-    th_book: "Book value",
 
     years_kicker: "Multi-year · planning only",
     years_title: "Loss-carry simulation (not current law)",

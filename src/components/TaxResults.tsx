@@ -5,7 +5,7 @@ import {
   buildAccountantPack,
   downloadAccountantZip,
 } from "@/lib/export/accountant";
-import { formatJpy, formatQty } from "@/lib/tax/engine";
+import { formatJpy } from "@/lib/tax/engine";
 import { filingTaxYears, isFilingYearLocked } from "@/lib/billing";
 import {
   exportBlockedByMissingPrices,
@@ -302,41 +302,6 @@ export function TaxResults() {
             {exportBusy ? t("auth_creating") : t("results_download")}
           </button>
         </div>
-      </div>
-
-      <div
-        className={`results-lots${locked ? " is-blurred" : ""}`}
-        aria-hidden={locked}
-      >
-        <h3>{t("results_lots")}</h3>
-        {locked ? (
-          <p className="muted">{t("freemium_table_locked")}</p>
-        ) : summary.endingLots.length === 0 ? (
-          <p className="muted">{t("results_no_lots")}</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("th_asset")}</th>
-                  <th>{t("th_qty")}</th>
-                  <th>{t("th_avg")}</th>
-                  <th>{t("th_book")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.endingLots.map((l) => (
-                  <tr key={l.asset}>
-                    <td>{l.asset}</td>
-                    <td>{formatQty(l.quantity)}</td>
-                    <td>{formatJpy(l.avgCostJpy)}</td>
-                    <td>{formatJpy(l.totalCostJpy)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </section>
   );
