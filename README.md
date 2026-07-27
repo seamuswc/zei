@@ -142,6 +142,23 @@ node scripts/ops-alerts.mjs --dry-run # no email / no state write
 
 Needs `.env.local`: `RESEND_API_KEY`, `EMAIL_FROM`, `ETHERSCAN_API_KEY`, `COINGECKO_API_KEY`, optional `OPS_ALERT_EMAIL` (forced to ops Gmail).
 
+### Pro payment lookup & refunds
+
+SQLite `payments.refunded_at` (ISO timestamp) prevents double-marking a refund. Optional `refund_note` for a short ops note.
+
+```bash
+# From /var/www/zei
+node scripts/lookup-payment.mjs user@example.com
+node scripts/lookup-payment.mjs <paymentId>
+node scripts/lookup-payment.mjs 0xabc123...   # tx hash
+
+# Mark refunded once (refuses if already refunded — exit 1)
+node scripts/mark-refunded.mjs <paymentId|txHash|email>
+node scripts/mark-refunded.mjs <paymentId> --note "chargeback 2026-07-27"
+```
+
+If email matches more than one finished non-refunded payment, the mark script refuses — use `payment_id` from lookup. When that payment is the user’s only active finished Pro unlock and `plan=pro`, the script sets plan back to free.
+
 ---
 
 ## Run locally

@@ -301,7 +301,7 @@ export async function verifyUsdcPayment(options: {
   const db = getDb();
   const row = db
     .prepare(
-      `SELECT id, user_id, status, amount_raw, from_address, created_at, tx_hash
+      `SELECT id, user_id, status, amount_raw, from_address, created_at, tx_hash, refunded_at
        FROM payments WHERE id = ?`,
     )
     .get(options.paymentId) as
@@ -313,11 +313,19 @@ export async function verifyUsdcPayment(options: {
         from_address: string | null;
         created_at: string;
         tx_hash: string | null;
+        refunded_at: string | null;
       }
     | undefined;
 
   if (!row || row.user_id !== options.userId) {
     return { ok: false, status: "missing", message: "Payment not found." };
+  }
+  if (row.refunded_at) {
+    return {
+      ok: false,
+      status: "missing",
+      message: "Payment was refunded.",
+    };
   }
   if (row.status === "finished" || row.tx_hash) {
     unlockPro(row.user_id, 365);
