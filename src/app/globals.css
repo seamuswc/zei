@@ -1651,6 +1651,15 @@ th {
   color: var(--ink);
 }
 
+.footer__refund {
+  margin-top: 0.5rem;
+  max-width: 42rem;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
 .import-panel--busy {
   opacity: 0.92;
 }

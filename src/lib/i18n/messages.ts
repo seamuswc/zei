@@ -251,6 +251,8 @@ export const messages = {
       "ZEI · 暗号資産の雑所得の計算補助のみ。確定申告そのもの・申告の代行ではありません。DeFi等は「確認」で価格と分類を見直してください。税理士向けZIPは「税額年度」→「税理士向けに出力」。税務・法務・会計の助言ではありません。",
     footer_contact:
       "不具合・ご質問などはお気軽にご連絡ください。通常48時間以内にご返信いたします。",
+    footer_refund:
+      "うまく動かないときは、何が起きたかお知らせください。Pro（USDC）の返金は、お支払いを確認できる場合に検討します。取引ハッシュ・アカウントのメール／ユーザー名・金額・チェーンをメールでお送りください。",
 
     auth_login: "ログイン",
     auth_register: "アカウント作成",
@@ -626,6 +628,8 @@ export const messages = {
       "ZEI · Crypto 雑所得 helper only — not a full tax return (確定申告) or filing substitute. Busy / DeFi wallets: check Review for prices and classification. Export ZIP from Tax year → Export for accountant. Not tax, legal, or accounting advice.",
     footer_contact:
       "Please contact us with bugs, questions, etc. We’ll respond within 48 hours.",
+    footer_refund:
+      "If something doesn’t work, please tell us what went wrong. Pro payment refunds are considered when you can prove payment — send the transaction hash, account email/username, amount, and chain (and anything else needed to verify the USDC send to our receive address).",
 
     auth_login: "Log in",
     auth_register: "Create account",
