@@ -121,6 +121,25 @@ sudo crontab -e
 
 Manual run: `ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /usr/local/bin/zei-backup-db.sh`
 
+### Ops alert emails
+
+Hourly script emails `OPS_ALERT_EMAIL` (default `seamuswconnolly@gmail.com`) via Resend when:
+
+- **Daily signups ≥ 10** (Asia/Tokyo day) — once per calendar day  
+- **Total users** crosses 100 / 200 / 300 … (state in `data/ops-alerts-state.json`)  
+- **Etherscan** or **CoinGecko** API credits low (&lt; 15% of limit or &lt; 10 000 remaining) — debounced 12h  
+
+```bash
+# From /var/www/zei
+node scripts/ops-alerts.mjs           # live
+node scripts/ops-alerts.mjs --dry-run # no email / no state write
+
+# Cron (hourly, root crontab)
+# 0 * * * * cd /var/www/zei && /usr/bin/node scripts/ops-alerts.mjs >> /var/log/zei-ops-alerts.log 2>&1
+```
+
+Needs `.env.local`: `RESEND_API_KEY`, `EMAIL_FROM`, `ETHERSCAN_API_KEY`, `COINGECKO_API_KEY`, optional `OPS_ALERT_EMAIL`.
+
 ---
 
 ## Run locally

@@ -1610,6 +1610,24 @@ th {
   font-size: 0.85rem;
 }
 
+.footer p {
+  margin: 0;
+}
+
+.footer__contact {
+  margin-top: 0.65rem;
+}
+
+.footer__contact a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.footer__contact a:hover {
+  color: var(--ink);
+}
+
 .import-panel--busy {
   opacity: 0.92;
 }

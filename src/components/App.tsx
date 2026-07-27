@@ -119,6 +119,10 @@ function AppShell() {
 
           <footer className="footer">
             <p>{t("footer")}</p>
+            <p className="footer__contact">
+              {t("footer_contact")}{" "}
+              <a href="mailto:seamus@cryptozei.com">seamus@cryptozei.com</a>
+            </p>
           </footer>
         </div>
       </AuthProvider>

@@ -245,6 +245,8 @@ export const messages = {
 
     footer:
       "ZEI · 暗号資産の雑所得のみ。確定申告の代わりではありません。税理士向けZIPは「税額年度」→「税理士向けに出力」から。税務・法務・会計の助言ではありません。",
+    footer_contact:
+      "不具合・ご質問などはお気軽にご連絡ください。通常48時間以内にご返信いたします。",
 
     auth_login: "ログイン",
     auth_register: "アカウント作成",
@@ -614,6 +616,8 @@ export const messages = {
 
     footer:
       "ZEI · Crypto 雑所得 only — not a full tax return (確定申告). Export ZIP from Tax year → Export for accountant. Not tax advice.",
+    footer_contact:
+      "Please contact us with bugs, questions, etc. We’ll respond within 48 hours.",
 
     auth_login: "Log in",
     auth_register: "Create account",
