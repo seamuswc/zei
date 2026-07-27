@@ -54,15 +54,21 @@ export const messages = {
     wallet_syncing: "同期中…",
     wallet_resolving: "ENSを解決しています…",
     wallet_sync_wait:
-      "全チェーンを同期中です。完了するまでお待ちください（別のアドレスは今は追加できません）。",
-    wallet_chains_limit: "チェーンを制限（上級）",
+      "Ethereumと主要L2を同期中です（通常は数十秒〜数分）。別のアドレスは完了後に追加できます。",
+    wallet_sync_still:
+      "まだ同期中です（{sec}秒）— そのままお待ちください。",
+    wallet_chains_limit: "チェーン選択 / 全チェーン同期（上級）",
     wallet_chains_limit_hint:
-      "通常は不要です。特定チェーンだけ同期したいときだけチェックを外してください。",
+      "デフォルトは Ethereum と主要L2のみ。全Etherscanチェーンを走査したいときだけ「全Etherscanチェーン」を選んでください。",
     wallet_chains_label: "同期するチェーン",
+    wallet_chains_preset_majors: "主要チェーン",
+    wallet_chains_preset_all: "全Etherscanチェーン",
     wallet_chains_selected: "{n}チェーン選択中",
     wallet_chains_required: "1つ以上のチェーンを選んでください。",
     wallet_linked_chains: "活動あり: {chains}",
     wallet_chain_partial: "一部チェーンで失敗: {chains}",
+    wallet_sync_deadline:
+      "時間切れのため途中までの取込です（{n}件）。残りは再同期するか、チェーンを制限してください。",
     wallet_linked: "接続済み: {address}",
     wallet_linked_ens: "接続済み: {ens} → {address}",
     wallet_linked_list: "接続済みウォレット",
@@ -257,6 +263,13 @@ export const messages = {
     ledger_bulk_include: "選択を含める",
     ledger_bulk_delete: "選択を削除",
     ledger_bulk_delete_confirm: "選択した{n}件を削除しますか？この操作は元に戻せません。",
+    dust_remove: "ゴミ数量を削除",
+    dust_hint:
+      "ゴミ数量: |数量| < 1e-6、または |円換算| < ¥1 かつ |数量| < 0.01 の取引を台帳から削除します。",
+    dust_confirm:
+      "ゴミ数量の取引 {n} 件を削除しますか？この操作は元に戻せません。",
+    dust_removed: "{n} 件のゴミ数量を削除しました。",
+    dust_none: "削除対象のゴミ数量はありません。",
 
     footer:
       "ZEI · 暗号資産の雑所得の計算補助のみ。確定申告そのもの・申告の代行ではありません。DeFi等は「確認」で価格と分類を見直してください。税理士向けZIPは「税額年度」→「税理士向けに出力」。税務・法務・会計の助言ではありません。",
@@ -439,15 +452,20 @@ export const messages = {
     wallet_syncing: "Syncing…",
     wallet_resolving: "Resolving ENS…",
     wallet_sync_wait:
-      "Syncing all chains — please wait. You can’t add another address until this finishes.",
-    wallet_chains_limit: "Limit chains (advanced)",
+      "Syncing Ethereum + major L2s (usually seconds to a couple minutes). You can’t add another address until this finishes.",
+    wallet_sync_still: "Still syncing ({sec}s) — please keep this tab open.",
+    wallet_chains_limit: "Choose chains / full Etherscan scan (advanced)",
     wallet_chains_limit_hint:
-      "Usually unnecessary. Uncheck chains only if you want a narrower sync.",
+      "Default sync is Ethereum + major L2s only. Use “All Etherscan chains” for a full scan across every supported mainnet.",
     wallet_chains_label: "Chains to sync",
+    wallet_chains_preset_majors: "Major chains",
+    wallet_chains_preset_all: "All Etherscan chains",
     wallet_chains_selected: "{n} chain(s) selected",
     wallet_chains_required: "Select at least one chain.",
     wallet_linked_chains: "Activity on: {chains}",
     wallet_chain_partial: "Partial failures: {chains}",
+    wallet_sync_deadline:
+      "Timed out mid-sync — imported {n} txs from chains that finished. Retry or limit chains for the rest.",
     wallet_linked: "Linked: {address}",
     wallet_linked_ens: "Linked: {ens} → {address}",
     wallet_linked_list: "Linked wallets",
@@ -645,6 +663,12 @@ export const messages = {
     ledger_bulk_delete: "Delete selected",
     ledger_bulk_delete_confirm:
       "Delete {n} selected row(s)? This cannot be undone.",
+    dust_remove: "Remove dust",
+    dust_hint:
+      "Dust: |qty| < 1e-6, or |JPY| < ¥1 and |qty| < 0.01 — deletes those rows from the portfolio.",
+    dust_confirm: "Remove {n} dust transaction(s)? This cannot be undone.",
+    dust_removed: "Removed {n} dust transaction(s).",
+    dust_none: "No dust transactions to remove.",
 
     footer:
       "ZEI · Crypto 雑所得 helper only — not a full tax return (確定申告) or filing substitute. Busy / DeFi wallets: check Review for prices and classification. Export ZIP from Tax year → Export for accountant. Not tax, legal, or accounting advice.",

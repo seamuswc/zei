@@ -15,6 +15,8 @@ import {
 } from "@/lib/i18n/api";
 
 export const runtime = "nodejs";
+/** Self-hosted Node ignores this; kept for clarity / future hosting. */
+export const maxDuration = 600;
 
 function clientIp(req: Request): string {
   return (
@@ -115,6 +117,7 @@ export async function POST(req: Request) {
       chainIds: result.chainIds,
       chainsSynced: result.chainsSynced,
       truncated: result.truncated,
+      partial: result.partial,
       count: result.txs.length,
       txs: result.txs,
     });

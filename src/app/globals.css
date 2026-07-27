@@ -1246,6 +1246,38 @@ select {
   outline-offset: -1px;
 }
 
+.dust-remove {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.85rem;
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, var(--line));
+  background: color-mix(in oklab, var(--fog) 55%, white);
+}
+
+.dust-remove__btn {
+  font-weight: 650;
+}
+
+.dust-remove__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  flex: 1 1 14rem;
+}
+
+.dust-remove__status {
+  margin: 0;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--jade-deep, #0f5c4c);
+}
+
+.dust-remove--results {
+  margin-top: 1.25rem;
+}
+
 .ledger-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1824,6 +1856,12 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
+}
+
+.wallet-chains__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
 }
 
 .wallet-chains__grid {

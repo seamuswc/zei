@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CryptoTx } from "@/lib/tax/types";
 import {
   isEnsName,
@@ -12,12 +12,16 @@ import {
   ETHERSCAN_CHAINS,
   allEtherscanChainIds,
   chainLabelForIds,
+  defaultWalletChainIds,
   getEtherscanChain,
 } from "@/lib/import/etherscan-chains";
 import { WALLET_HISTORY_TRUNCATED_KEY } from "@/lib/import/wallet-sync-ui";
 import { countNeedsPrice } from "@/lib/tax/price-quality";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
+
+/** Browser safety net only — nginx/proxy and server soft deadline are lower. */
+const CLIENT_FETCH_TIMEOUT_MS = 600_000;
 
 async function readJsonSafe(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text();
@@ -61,11 +65,28 @@ export function WalletConnect() {
   const [resolvedLine, setResolvedLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  /** Advanced: when true, sync only checked chains; otherwise all Etherscan V2. */
+  const [elapsedSec, setElapsedSec] = useState(0);
+  /**
+   * Advanced open: sync checked chains (may include full Etherscan list).
+   * Closed: omit chainIds → API uses ETH + major L2 defaults.
+   */
   const [limitChains, setLimitChains] = useState(false);
   const [selectedChains, setSelectedChains] = useState<number[]>(() =>
-    allEtherscanChainIds(),
+    defaultWalletChainIds(),
   );
+
+  useEffect(() => {
+    if (!busy) {
+      setElapsedSec(0);
+      return;
+    }
+    const t0 = Date.now();
+    setElapsedSec(0);
+    const id = window.setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - t0) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [busy]);
 
   async function onConnect() {
     if (busy) return;
@@ -89,18 +110,22 @@ export function WalletConnect() {
     setError(null);
     setStatus(null);
     setResolvedLine(null);
+    const ac = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => ac.abort(),
+      CLIENT_FETCH_TIMEOUT_MS,
+    );
     try {
       const res = await fetch("/api/wallet/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: addr,
-          ...(limitChains
-            ? { chainIds: selectedChains }
-            : { allChains: true }),
+          ...(limitChains ? { chainIds: selectedChains } : {}),
           // Include already-linked wallets so counterparty hops classify as transfers
           linkedAddresses: linkedWallets,
         }),
+        signal: ac.signal,
       });
       const data = await readJsonSafe(res);
       if (!res.ok) {
@@ -146,13 +171,20 @@ export function WalletConnect() {
           }>)
         : [];
       const failBits = chainsSynced
-        .filter((c) => c.error)
+        .filter(
+          (c) =>
+            c.error &&
+            !/deadline reached/i.test(String(c.error)),
+        )
         .map((c) => c.name || "?")
         .slice(0, 4);
       const failNote =
         failBits.length > 0
           ? ` ${t("wallet_chain_partial", { chains: failBits.join(", ") })}`
           : "";
+      const deadlineNote = data.partial
+        ? ` ${t("wallet_sync_deadline", { n: txs.length })}`
+        : "";
       try {
         if (data.truncated) {
           sessionStorage.setItem(WALLET_HISTORY_TRUNCATED_KEY, "1");
@@ -164,13 +196,20 @@ export function WalletConnect() {
       }
       setStatus(
         data.truncated
-          ? `${okLine}${priceNote} ${t("wallet_history_truncated")}${failNote}`
-          : `${okLine}${priceNote}${failNote}`,
+          ? `${okLine}${priceNote} ${t("wallet_history_truncated")}${failNote}${deadlineNote}`
+          : `${okLine}${priceNote}${failNote}${deadlineNote}`,
       );
       setAddress("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Wallet sync failed");
+      if (e instanceof DOMException && e.name === "AbortError") {
+        setError(
+          "Wallet sync timed out. Wait a moment and try again, or limit chains.",
+        );
+      } else {
+        setError(e instanceof Error ? e.message : "Wallet sync failed");
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       setBusy(false);
     }
   }
@@ -180,7 +219,9 @@ export function WalletConnect() {
     : t("wallet_syncing");
   const busyBanner = looksLikeEnsAttempt(address)
     ? t("wallet_resolving")
-    : t("wallet_sync_wait");
+    : elapsedSec >= 15
+      ? t("wallet_sync_still", { sec: elapsedSec })
+      : t("wallet_sync_wait");
 
   return (
     <div className={`import-panel${busy ? " import-panel--busy" : ""}`}>
@@ -228,13 +269,31 @@ export function WalletConnect() {
         onToggle={(e) => {
           const open = e.currentTarget.open;
           setLimitChains(open);
-          if (open) setSelectedChains(allEtherscanChainIds());
+          if (open) setSelectedChains(defaultWalletChainIds());
         }}
       >
         <summary>{t("wallet_chains_limit")}</summary>
         <fieldset className="wallet-chains" disabled={busy}>
           <legend>{t("wallet_chains_label")}</legend>
           <p className="field-hint">{t("wallet_chains_limit_hint")}</p>
+          <div className="wallet-chains__presets">
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              disabled={busy}
+              onClick={() => setSelectedChains(defaultWalletChainIds())}
+            >
+              {t("wallet_chains_preset_majors")}
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              disabled={busy}
+              onClick={() => setSelectedChains(allEtherscanChainIds())}
+            >
+              {t("wallet_chains_preset_all")}
+            </button>
+          </div>
           <div className="wallet-chains__grid">
             {ETHERSCAN_CHAINS.map((c) => (
               <label key={c.id} className="wallet-chains__opt">
