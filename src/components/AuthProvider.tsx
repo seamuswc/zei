@@ -29,7 +29,9 @@ type AuthCtx = {
   isPro: boolean;
   refreshMe: () => Promise<void>;
   startProPay: () => Promise<void>;
-  /** Session only — never clears portfolio / linked accounts. */
+  /** Ends session and wipes local portfolio (cloud data stays on the account). */
+  logout: () => Promise<void>;
+  /** Session only — does not wipe portfolio (use `logout` for that). */
   setUser: (u: AuthUser | null) => void;
 };
 
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const {
     hydrateFromServer,
     setTaxYears,
+    clearLocalPortfolio,
     txs,
     otherIncomeJpy,
     incomeProvided,
@@ -67,7 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       taxYears?: YearCarryRow[];
     };
-    // Auth session only — never clear local ledger / linked wallets when user is null.
+    // Session probe only — do not wipe local portfolio on null user (refresh / expired cookie).
+    // Explicit logout calls clearLocalPortfolio separately.
     setUser(data.user);
 
     const serverTxs = data.ledger?.txs;
@@ -137,6 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const logout = useCallback(async () => {
+    // Drop session first so autosave cannot PUT an emptied ledger to the cloud.
+    skipSaveRef.current = true;
+    setUser(null);
+    clearLocalPortfolio();
+    await fetch("/api/auth/logout", { method: "POST" });
+  }, [clearLocalPortfolio]);
+
   const value = useMemo(
     () => ({
       user,
@@ -144,9 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isPro: user?.plan === "pro",
       refreshMe,
       startProPay,
+      logout,
       setUser,
     }),
-    [user, loading, refreshMe, startProPay],
+    [user, loading, refreshMe, startProPay, logout],
   );
 
   return (

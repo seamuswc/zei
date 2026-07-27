@@ -6,7 +6,7 @@ import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
 
 export function AuthMenu() {
-  const { user, isPro, refreshMe, startProPay, setUser } = useAuth();
+  const { user, isPro, refreshMe, startProPay, logout } = useAuth();
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -112,10 +112,8 @@ export function AuthMenu() {
     }
   }
 
-  /** Ends the session cookie only — keeps local ledger + linked accounts. */
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
+  async function onLogout() {
+    await logout();
     setOpen(false);
   }
 
@@ -278,7 +276,7 @@ export function AuthMenu() {
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
-                  onClick={() => void logout()}
+                  onClick={() => void onLogout()}
                 >
                   {t("auth_logout")}
                 </button>

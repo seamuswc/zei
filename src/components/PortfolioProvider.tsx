@@ -25,6 +25,7 @@ import {
   exchangeTxMatchesId,
   resolveExchangeLinkId,
 } from "@/lib/tax/exchange-links";
+import { WALLET_HISTORY_TRUNCATED_KEY } from "@/lib/import/wallet-sync-ui";
 
 const LINKS_STORAGE_KEY = "zei_linked_accounts";
 const LEDGER_STORAGE_KEY = "zei_local_ledger";
@@ -143,6 +144,17 @@ function writeStoredLedger(data: StoredLedger) {
   }
 }
 
+function removePortfolioStorageKeys() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LEDGER_STORAGE_KEY);
+    localStorage.removeItem(LINKS_STORAGE_KEY);
+    localStorage.removeItem(WALLET_HISTORY_TRUNCATED_KEY);
+  } catch {
+    /* ignore private mode */
+  }
+}
+
 /** Recover link badges from ledger txs when storage was never written. */
 function linksFromTxs(txs: CryptoTx[]): {
   wallets: string[];
@@ -220,6 +232,11 @@ interface PortfolioState {
   availableYears: number[];
   addTxs: (incoming: CryptoTx[]) => void;
   clearTxs: () => void;
+  /**
+   * Wipe in-memory + localStorage portfolio (logout privacy).
+   * Does not touch cloud; next login hydrates from `/api/auth/me`.
+   */
+  clearLocalPortfolio: () => void;
   setYear: (y: number) => void;
   setOtherIncomeJpy: (n: number) => void;
   setConnectedWallet: (a?: string) => void;
@@ -341,7 +358,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // Restore ledger + linked accounts from localStorage (survives logout/refresh).
+  // Restore ledger + linked accounts from localStorage (survives refresh while logged in).
+  // Logout calls clearLocalPortfolio() so a later visitor cannot see prior data.
   // Auth must wait for ledgerReady before cloud hydrate so we don't flash-empty.
   useEffect(() => {
     const storedLedger = readStoredLedger();
@@ -396,7 +414,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     flushLinks,
   ]);
 
-  // Persist ledger locally so logout / refresh still shows imports.
+  // Persist ledger locally so refresh (while still using this browser) keeps imports.
   useEffect(() => {
     if (!ledgerReady) return;
     writeStoredLedger({
@@ -501,6 +519,31 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       year: filingTaxYears()[0] - 1,
     });
   }, [flushLinks]);
+
+  /** Logout privacy: wipe local portfolio so the next visitor sees a blank slate. */
+  const clearLocalPortfolio = useCallback(() => {
+    const defaultYear = filingTaxYears()[0] - 1;
+    serverHydratedRef.current = false;
+    seededFromTxsRef.current = false;
+    hadStoredLinksRef.current = false;
+    linksSnapshotRef.current = {
+      linkedWallets: [],
+      walletEnsLabels: {},
+      walletChains: {},
+      linkedExchanges: [],
+    };
+    setTxs([]);
+    setTaxYears([]);
+    setOtherIncomeJpyState(0);
+    setIncomeProvided(false);
+    setYear(defaultYear);
+    setConnectedWallet(undefined);
+    setLinkedWallets([]);
+    setWalletEnsLabels({});
+    setWalletChains({});
+    setLinkedExchanges([]);
+    removePortfolioStorageKeys();
+  }, []);
 
   const setOtherIncomeJpy = useCallback((n: number) => {
     setOtherIncomeJpyState(Math.max(0, n));
@@ -739,6 +782,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       ledgerReady,
       addTxs,
       clearTxs,
+      clearLocalPortfolio,
       setYear,
       setOtherIncomeJpy,
       setConnectedWallet,
@@ -770,6 +814,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       ledgerReady,
       addTxs,
       clearTxs,
+      clearLocalPortfolio,
       setOtherIncomeJpy,
       markWalletLinked,
       unlinkWallet,

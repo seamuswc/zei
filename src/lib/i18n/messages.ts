@@ -282,7 +282,7 @@ export const messages = {
     auth_plan_pro: "Pro",
     auth_pay: "USDCでPro（今年・昨年を解除）",
     auth_autosave_hint:
-      "メール確認済みのアカウントでは、取込・編集・クリアがクラウドに自動保存されます。",
+      "メール確認済みのアカウントでは、取込・編集・クリアがクラウドに自動保存されます。ログアウトするとこの端末のローカルデータは消去されます（クラウドは残ります）。",
     pay_title: "USDCでProを購入",
     pay_close: "閉じる",
     pay_lead:
@@ -668,7 +668,7 @@ export const messages = {
     auth_plan_pro: "Pro",
     auth_pay: "Pay USDC (unlock this year & last)",
     auth_autosave_hint:
-      "With a verified email, imports, edits, and clears autosave to your account.",
+      "With a verified email, imports, edits, and clears autosave to your account. Logging out clears local data on this device (cloud data stays).",
     pay_title: "Pay Pro with USDC",
     pay_close: "Close",
     pay_lead:
