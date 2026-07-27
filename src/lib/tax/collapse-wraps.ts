@@ -1,5 +1,5 @@
 import type { CryptoTx } from "@/lib/tax/types";
-import { isWrapPair } from "@/lib/tax/wraps";
+import { isRateFlexibleWrap, isWrapPair } from "@/lib/tax/wraps";
 
 /**
  * Collapse same-hash ETH↔WETH (etc.) buy+sell into a non-taxable wrap.
@@ -31,10 +31,14 @@ export function collapseWraps(txs: CryptoTx[]): CryptoTx[] {
         const sell = a.side === "sell" ? a : b;
         const buy = a.side === "buy" ? a : b;
         if (sell.asset.toUpperCase() === buy.asset.toUpperCase()) continue;
-        // qty roughly equal
-        const mid = (sell.quantity + buy.quantity) / 2;
-        if (Math.abs(sell.quantity - buy.quantity) > Math.max(mid * 0.02, 1e-8)) {
-          continue;
+        // qty roughly equal (LST share-rate wraps may differ)
+        if (!isRateFlexibleWrap(sell.asset, buy.asset)) {
+          const mid = (sell.quantity + buy.quantity) / 2;
+          if (
+            Math.abs(sell.quantity - buy.quantity) > Math.max(mid * 0.02, 1e-8)
+          ) {
+            continue;
+          }
         }
         remove.add(sell.id);
         remove.add(buy.id);

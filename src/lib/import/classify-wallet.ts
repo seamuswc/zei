@@ -1,5 +1,5 @@
 import type { CryptoTx, PriceSource, TxSide } from "@/lib/tax/types";
-import { isWrapPair } from "@/lib/tax/wraps";
+import { isRateFlexibleWrap, isWrapPair } from "@/lib/tax/wraps";
 import {
   defiLabelFor,
   isAirdropDistributor,
@@ -173,7 +173,10 @@ function classifyHashGroup(
   if (outs.length === 1 && ins.length === 1) {
     const o = outs[0];
     const i = ins[0];
-    if (isWrapPair(o.asset, i.asset) && approxEq(o.qty, i.qty)) {
+    if (
+      isWrapPair(o.asset, i.asset) &&
+      (approxEq(o.qty, i.qty) || isRateFlexibleWrap(o.asset, i.asset))
+    ) {
       out.push({
         id: `wrap_${o.leg.id}`,
         date: o.leg.date,

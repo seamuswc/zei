@@ -14,6 +14,8 @@ import {
   chainLabelForIds,
   getEtherscanChain,
 } from "@/lib/import/etherscan-chains";
+import { WALLET_HISTORY_TRUNCATED_KEY } from "@/lib/import/wallet-sync-ui";
+import { countNeedsPrice } from "@/lib/tax/price-quality";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
@@ -131,6 +133,11 @@ export function WalletConnect() {
         chain: chainLabel,
         n: Number(data.count ?? txs.length),
       });
+      const needsPriceN = countNeedsPrice(txs);
+      const priceNote =
+        needsPriceN > 0
+          ? ` ${t("wallet_sync_needs_price", { n: needsPriceN })}`
+          : "";
       const chainsSynced = Array.isArray(data.chainsSynced)
         ? (data.chainsSynced as Array<{
             name?: string;
@@ -146,10 +153,19 @@ export function WalletConnect() {
         failBits.length > 0
           ? ` ${t("wallet_chain_partial", { chains: failBits.join(", ") })}`
           : "";
+      try {
+        if (data.truncated) {
+          sessionStorage.setItem(WALLET_HISTORY_TRUNCATED_KEY, "1");
+        } else {
+          sessionStorage.removeItem(WALLET_HISTORY_TRUNCATED_KEY);
+        }
+      } catch {
+        /* ignore private mode */
+      }
       setStatus(
         data.truncated
-          ? `${okLine} ${t("wallet_history_truncated")}${failNote}`
-          : `${okLine}${failNote}`,
+          ? `${okLine}${priceNote} ${t("wallet_history_truncated")}${failNote}`
+          : `${okLine}${priceNote}${failNote}`,
       );
       setAddress("");
     } catch (e) {

@@ -1249,6 +1249,14 @@ select {
   user-select: none;
 }
 
+.ledger-filter--prominent {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid color-mix(in oklab, #b45309 35%, var(--line));
+  background: color-mix(in oklab, #f59e0b 10%, var(--paper));
+  color: #5c3d0a;
+  font-weight: 600;
+}
+
 .ledger-filter input {
   margin: 0;
 }

@@ -1,6 +1,8 @@
 import type { CryptoTx } from "./types";
 import {
+  countNeedsPrice,
   exportBlockedByMissingPrices,
+  txNeedsReview,
   txsNeedingPrice,
 } from "./price-quality";
 
@@ -33,6 +35,25 @@ function tx(partial: Partial<CryptoTx> & Pick<CryptoTx, "id" | "side">): CryptoT
   }
   if (exportBlockedByMissingPrices(rows.filter((t) => t.id === "ok"), 2025)) {
     throw new Error("clean year should export");
+  }
+}
+
+{
+  const rows = [
+    tx({ id: "bad", side: "sell", jpyValue: 0, priceSource: "unknown" }),
+    tx({
+      id: "xfer",
+      side: "transfer_out",
+      jpyValue: 0,
+      note: "auto: unknown outbound → transfer_out (check Review)",
+    }),
+    tx({ id: "ok", side: "sell", jpyValue: 100_000, priceSource: "coingecko_history" }),
+  ];
+  if (countNeedsPrice(rows) !== 1) {
+    throw new Error(`expected countNeedsPrice 1, got ${countNeedsPrice(rows)}`);
+  }
+  if (!txNeedsReview(rows[0]) || !txNeedsReview(rows[1]) || txNeedsReview(rows[2])) {
+    throw new Error("txNeedsReview mismatch");
   }
 }
 

@@ -24,3 +24,35 @@ export function exportBlockedByMissingPrices(
 ): boolean {
   return txsNeedingPrice(txs, year).length > 0;
 }
+
+/** Sell/income rows (any year) with unknown or ¥0 JPY — used by Review UX. */
+export function txNeedsPrice(tx: CryptoTx): boolean {
+  if (tx.excluded) return false;
+  if (!PRICE_SIDES.has(tx.side)) return false;
+  if (tx.priceSource === "unknown") return true;
+  if (!(tx.jpyValue > 0)) return true;
+  return false;
+}
+
+/**
+ * Rows that should surface in Review first: missing price on taxable sides,
+ * or auto-classified transfers / uncertain DeFi notes marked for Review.
+ */
+export function txNeedsReview(tx: CryptoTx): boolean {
+  if (tx.excluded) return false;
+  if (txNeedsPrice(tx)) return true;
+  const note = tx.note ?? "";
+  if (note.includes("(check Review)")) return true;
+  if (
+    (tx.side === "transfer_in" || tx.side === "transfer_out") &&
+    note.startsWith("auto:")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Count unpriced sell/income among a freshly synced batch (any year). */
+export function countNeedsPrice(txs: CryptoTx[]): number {
+  return txs.filter(txNeedsPrice).length;
+}

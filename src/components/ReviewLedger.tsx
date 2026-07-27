@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { TxSide } from "@/lib/tax/types";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { formatJpy } from "@/lib/tax/engine";
-import { txsNeedingPrice } from "@/lib/tax/price-quality";
+import { WALLET_HISTORY_TRUNCATED_KEY } from "@/lib/import/wallet-sync-ui";
+import { txNeedsPrice, txNeedsReview } from "@/lib/tax/price-quality";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 
@@ -26,7 +27,6 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100, 0] as const;
 export function ReviewLedger() {
   const {
     txs,
-    year,
     updateTx,
     updateManyTxs,
     removeTx,
@@ -39,24 +39,40 @@ export function ReviewLedger() {
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkJpy, setBulkJpy] = useState("");
-  const [filterNeedsPrice, setFilterNeedsPrice] = useState(false);
+  const [filterNeedsReview, setFilterNeedsReview] = useState(false);
+  const [filterBootstrapped, setFilterBootstrapped] = useState(false);
+  const [historyTruncated, setHistoryTruncated] = useState(false);
 
   const needPriceIds = useMemo(() => {
-    const set = new Set(txsNeedingPrice(txs, year).map((tx) => tx.id));
-    // Also flag other years' unknown sell/income so Review is useful after import
+    const set = new Set<string>();
     for (const tx of txs) {
-      if (tx.excluded) continue;
-      if (tx.side !== "sell" && tx.side !== "income") continue;
-      if (tx.priceSource === "unknown" || !(tx.jpyValue > 0)) set.add(tx.id);
+      if (txNeedsPrice(tx)) set.add(tx.id);
     }
     return set;
-  }, [txs, year]);
+  }, [txs]);
   const needPriceCount = needPriceIds.size;
 
+  const needReviewIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const tx of txs) {
+      if (txNeedsReview(tx)) set.add(tx.id);
+    }
+    return set;
+  }, [txs]);
+  const needReviewCount = needReviewIds.size;
+
   const visibleTxs = useMemo(() => {
-    if (!filterNeedsPrice) return txs;
-    return txs.filter((tx) => needPriceIds.has(tx.id));
-  }, [txs, filterNeedsPrice, needPriceIds]);
+    const base = filterNeedsReview
+      ? txs.filter((tx) => needReviewIds.has(tx.id))
+      : txs;
+    // Surface needs-review rows first (stable by date within each group).
+    return [...base].sort((a, b) => {
+      const ar = needReviewIds.has(a.id) ? 0 : 1;
+      const br = needReviewIds.has(b.id) ? 0 : 1;
+      if (ar !== br) return ar - br;
+      return a.date.localeCompare(b.date);
+    });
+  }, [txs, filterNeedsReview, needReviewIds]);
 
   const total = visibleTxs.length;
   const effectiveSize = pageSize === 0 ? Math.max(total, 1) : pageSize;
@@ -77,7 +93,21 @@ export function ReviewLedger() {
 
   useEffect(() => {
     setPage(0);
-  }, [filterNeedsPrice, pageSize]);
+  }, [filterNeedsReview, pageSize]);
+
+  useEffect(() => {
+    if (filterBootstrapped || txs.length === 0) return;
+    if (needReviewCount > 0) setFilterNeedsReview(true);
+    setFilterBootstrapped(true);
+  }, [txs.length, needReviewCount, filterBootstrapped]);
+
+  useEffect(() => {
+    try {
+      setHistoryTruncated(sessionStorage.getItem(WALLET_HISTORY_TRUNCATED_KEY) === "1");
+    } catch {
+      setHistoryTruncated(false);
+    }
+  }, [txs.length]);
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -138,9 +168,18 @@ export function ReviewLedger() {
     }
   }
 
-  function selectNeedsPrice() {
-    setSelected(new Set(needPriceIds));
-    setFilterNeedsPrice(true);
+  function selectNeedsReview() {
+    setSelected(new Set(needReviewIds));
+    setFilterNeedsReview(true);
+  }
+
+  function dismissTruncationBanner() {
+    try {
+      sessionStorage.removeItem(WALLET_HISTORY_TRUNCATED_KEY);
+    } catch {
+      /* ignore */
+    }
+    setHistoryTruncated(false);
   }
 
   function applyBulkJpy(clear: boolean) {
@@ -176,15 +215,39 @@ export function ReviewLedger() {
         <p className="import-kicker">{t("review_kicker")}</p>
         <h2>{t("review_title")}</h2>
         <p>{t("review_sub")}</p>
+        {historyTruncated && (
+          <p className="price-warning price-warning--inline" role="status">
+            {t("review_history_truncated")}{" "}
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={dismissTruncationBanner}
+            >
+              {t("review_banner_dismiss")}
+            </button>
+          </p>
+        )}
         {needPriceCount > 0 && (
           <p className="price-warning price-warning--inline" role="status">
             {t("review_needs_price", { n: needPriceCount })}{" "}
             <button
               type="button"
               className="btn btn--ghost btn--sm"
-              onClick={selectNeedsPrice}
+              onClick={selectNeedsReview}
             >
-              {t("ledger_select_needs_price")}
+              {t("ledger_select_needs_review")}
+            </button>
+          </p>
+        )}
+        {needReviewCount > 0 && needReviewCount !== needPriceCount && (
+          <p className="price-warning price-warning--inline" role="status">
+            {t("review_needs_review", { n: needReviewCount })}{" "}
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={selectNeedsReview}
+            >
+              {t("ledger_select_needs_review")}
             </button>
           </p>
         )}
@@ -208,13 +271,16 @@ export function ReviewLedger() {
           >
             {t("ledger_clear_selection")}
           </button>
-          <label className="ledger-filter">
+          <label className="ledger-filter ledger-filter--prominent">
             <input
               type="checkbox"
-              checked={filterNeedsPrice}
-              onChange={(e) => setFilterNeedsPrice(e.target.checked)}
+              checked={filterNeedsReview}
+              onChange={(e) => setFilterNeedsReview(e.target.checked)}
             />
-            <span>{t("ledger_filter_needs_price")}</span>
+            <span>
+              {t("ledger_filter_needs_review")}
+              {needReviewCount > 0 ? ` (${needReviewCount})` : ""}
+            </span>
           </label>
           <span className="ledger-toolbar__count" aria-live="polite">
             {t("ledger_selected_count", { n: selectedCount })}

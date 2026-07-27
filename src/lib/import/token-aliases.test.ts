@@ -52,4 +52,20 @@ if (underlyingOfAToken("aUsdc") !== "USDC") {
   throw new Error("case-insensitive aToken lookup failed");
 }
 
+if (coinIdForAsset("SUSHI") !== "sushi") {
+  throw new Error("SUSHI should map to sushi");
+}
+if (coinIdForAsset("RPL") !== "rocket-pool") {
+  throw new Error("RPL should map to rocket-pool");
+}
+if (coinIdForAsset("ASUSHI") !== "sushi") {
+  throw new Error("ASUSHI should price via SUSHI");
+}
+if (coinIdForAsset("STETH") !== "staked-ether") {
+  throw new Error("STETH should map to staked-ether");
+}
+if (coinIdForAsset("AREP") !== "augur") {
+  throw new Error("AREP should price via REP → augur");
+}
+
 console.log("token-aliases checks ok");

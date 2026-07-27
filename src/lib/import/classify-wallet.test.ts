@@ -110,6 +110,68 @@ function leg(partial: Partial<WalletLeg> & Pick<WalletLeg, "id" | "asset" | "dir
   }
 }
 
+// Wrap: ETH ↔ stETH (Lido stake / unwrap, ~1:1)
+{
+  const hash = "0xstethwrap";
+  const txs = classifyWalletLegs([
+    leg({
+      id: "eth_out",
+      asset: "ETH",
+      direction: "out",
+      quantity: 1,
+      jpyValue: 400_000,
+      txHash: hash,
+      from: WALLET,
+      to: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+    }),
+    leg({
+      id: "st_in",
+      asset: "STETH",
+      direction: "in",
+      quantity: 1,
+      jpyValue: 400_000,
+      txHash: hash,
+      from: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84",
+      to: WALLET,
+    }),
+  ]);
+  if (txs.length !== 1 || txs[0].side !== "wrap") {
+    throw new Error(`expected ETH↔stETH wrap, got ${txs.map((t) => t.side)}`);
+  }
+}
+
+// Wrap: stETH ↔ wstETH even when qty differs (share rate)
+{
+  const hash = "0xwstethwrap";
+  const txs = classifyWalletLegs([
+    leg({
+      id: "st_out",
+      asset: "STETH",
+      direction: "out",
+      quantity: 1.2,
+      jpyValue: 480_000,
+      txHash: hash,
+      from: WALLET,
+      to: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+    }),
+    leg({
+      id: "wst_in",
+      asset: "WSTETH",
+      direction: "in",
+      quantity: 1,
+      jpyValue: 480_000,
+      txHash: hash,
+      from: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      to: WALLET,
+    }),
+  ]);
+  if (txs.length !== 1 || txs[0].side !== "wrap") {
+    throw new Error(
+      `expected stETH↔wstETH wrap despite qty mismatch, got ${txs.map((t) => t.side)}`,
+    );
+  }
+}
+
 // Self-transfer to another linked wallet
 {
   const txs = classifyWalletLegs(

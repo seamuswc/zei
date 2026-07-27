@@ -71,6 +71,8 @@ export const messages = {
       "ENS名が無効です。英数字とハイフンの name.eth 形式で入力してください。",
     wallet_sync_ok:
       "同期完了 · {chain} · {n}件（税額計算に反映）。DeFiは可能な範囲で自動分類済み — Reviewで確認してください。",
+    wallet_sync_needs_price:
+      "要価格: 売却・受取で円換算不明／¥0が{n}件あります — 確認画面で修正してください。",
     wallet_history_truncated:
       "履歴が上限（ページ数）に達したため途中までしか取得できていません。忙しいウォレットはCSV併用を検討してください。",
     unlink: "解除",
@@ -178,6 +180,11 @@ export const messages = {
     price_needs_fix: "要価格",
     review_needs_price:
       "円換算不明または¥0の売却・受取が{n}件あります。税理士ZIP出力前に修正または除外してください。",
+    review_needs_review:
+      "要確認: {n}件（要価格、または自動分類の振替・不明行）。下の「要確認のみ」で絞り込めます。",
+    review_history_truncated:
+      "ウォレット同期で履歴がページ上限に達しました。古い／途中の取引が欠けている可能性があります。忙しいウォレットはCSV併用を検討してください。",
+    review_banner_dismiss: "閉じる",
     results_impact_kicker: "暗号資産所得（最終税額ではない）",
     results_impact_p:
       "売却・受取・手数料後のネットです。他所得との合算はZEIの範囲外です。",
@@ -238,6 +245,8 @@ export const messages = {
     ledger_select_row: "行を選択",
     ledger_select_needs_price: "要価格を選択",
     ledger_filter_needs_price: "要価格のみ",
+    ledger_select_needs_review: "要確認を選択",
+    ledger_filter_needs_review: "要確認のみ",
     ledger_selected_count: "{n}件選択中",
     ledger_bulk_jpy_label: "円（一括）",
     ledger_bulk_set_jpy: "選択行に円を設定",
@@ -445,6 +454,8 @@ export const messages = {
       "Invalid ENS name. Use a basic name.eth (letters, numbers, hyphens).",
     wallet_sync_ok:
       "Synced · {chain} · {n} rows (added to tax calc). DeFi auto-labeled when possible — check Review.",
+    wallet_sync_needs_price:
+      "Needs price: {n} sell/income row(s) have unknown or ¥0 JPY — fix them in Review.",
     wallet_history_truncated:
       "History hit the page limit — some older/middle txs may be missing. Busy wallets: prefer CSV alongside sync.",
     unlink: "Unlink",
@@ -554,6 +565,11 @@ export const messages = {
     price_needs_fix: "needs price",
     review_needs_price:
       "{n} sell/income row(s) have unknown or ¥0 JPY. Fix or exclude before accountant ZIP export.",
+    review_needs_review:
+      "{n} row(s) need review (missing price, or auto transfer / uncertain classification). Use “Needs review” below to filter.",
+    review_history_truncated:
+      "Wallet sync hit the history page limit — older/middle txs may be missing. Busy wallets: prefer CSV alongside sync.",
+    review_banner_dismiss: "Dismiss",
     results_impact_kicker: "Crypto gain (not final tax)",
     results_impact_p:
       "Net figure after sells, income receipts, and in-asset fees. Japan adds this to other income — this app does not finalize that.",
@@ -614,6 +630,8 @@ export const messages = {
     ledger_select_row: "Select row",
     ledger_select_needs_price: "Select needs price",
     ledger_filter_needs_price: "Needs price only",
+    ledger_select_needs_review: "Select needs review",
+    ledger_filter_needs_review: "Needs review",
     ledger_selected_count: "{n} selected",
     ledger_bulk_jpy_label: "JPY (bulk)",
     ledger_bulk_set_jpy: "Set JPY on selected",
