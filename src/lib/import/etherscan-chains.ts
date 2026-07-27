@@ -2,6 +2,8 @@
  * Etherscan API V2 mainnets (https://api.etherscan.io/v2/chainlist).
  * Testnets omitted — tax import is mainnet-only.
  * Scroll / zkSync Era / Polygon zkEVM are not on the current V2 chainlist.
+ *
+ * Default wallet sync = `popular` majors only (~8). Full list is opt-in.
  */
 
 export type EtherscanChain = {
@@ -11,7 +13,7 @@ export type EtherscanChain = {
   nativeSymbol: string;
   /** CoinGecko id for native token JPY history (null = unpriced). */
   coinId: string | null;
-  /** Shown in the Popular preset group in the wallet UI. */
+  /** Default wallet sync set (ETH + major L2s / hubs). */
   popular?: boolean;
 };
 
@@ -77,21 +79,19 @@ export const ETHERSCAN_CHAINS: EtherscanChain[] = [
     coinId: "ethereum",
     popular: true,
   },
+  // —— More (still V2 mainnets; not in default sync) ——
   {
     id: 81457,
     name: "Blast",
     nativeSymbol: "ETH",
     coinId: "ethereum",
-    popular: true,
   },
   {
     id: 5000,
     name: "Mantle",
     nativeSymbol: "MNT",
     coinId: "mantle",
-    popular: true,
   },
-  // —— More (still V2 mainnets) ——
   {
     id: 204,
     name: "opBNB",
@@ -250,14 +250,17 @@ export function allEtherscanChainIds(): number[] {
   return ETHERSCAN_CHAINS.map((c) => c.id);
 }
 
-/** Default sync target: every Etherscan V2 mainnet (same address across EVM). */
+/**
+ * Default sync target: Ethereum + major L2s / EVM hubs with real users.
+ * Full Etherscan V2 list is opt-in via `allChains` / advanced UI.
+ */
 export function defaultWalletChainIds(): number[] {
-  return allEtherscanChainIds();
+  return popularEtherscanChains().map((c) => c.id);
 }
 
 /**
  * Normalize client/API chain selection.
- * Empty / missing → all Etherscan V2 mainnets. Unknown ids dropped.
+ * Empty / missing → major defaults (not all 33). Unknown ids dropped.
  */
 export function resolveWalletChainIds(input?: number[] | null): number[] {
   if (!input || input.length === 0) return defaultWalletChainIds();
@@ -272,10 +275,19 @@ export function resolveWalletChainIds(input?: number[] | null): number[] {
   return out.length ? out : defaultWalletChainIds();
 }
 
+function sameIdSet(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((id) => set.has(id));
+}
+
 export function chainLabelForIds(ids: number[]): string {
   if (ids.length === 0) return "—";
   if (ids.length === ETHERSCAN_CHAINS.length) {
     return `All Etherscan chains (${ids.length})`;
+  }
+  if (sameIdSet(ids, defaultWalletChainIds())) {
+    return `ETH + major L2s (${ids.length})`;
   }
   const names = ids
     .map((id) => BY_ID.get(id)?.name ?? `chain ${id}`)

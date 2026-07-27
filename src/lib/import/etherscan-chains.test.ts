@@ -17,16 +17,23 @@ import {
 }
 
 {
-  const required = [1, 137, 42161, 10, 8453, 56, 43114, 59144, 81457, 5000];
+  const required = [1, 137, 42161, 10, 8453, 56, 43114, 59144];
   for (const id of required) {
-    if (!getEtherscanChain(id)) {
-      throw new Error(`missing popular chain ${id}`);
+    if (!getEtherscanChain(id)?.popular) {
+      throw new Error(`missing popular/default chain ${id}`);
     }
   }
   const pop = popularEtherscanChains();
-  if (pop.length < 8) throw new Error(`popular too small: ${pop.length}`);
+  if (pop.length < 5 || pop.length > 8) {
+    throw new Error(`popular should be ~5–8 majors, got ${pop.length}`);
+  }
   if (!pop.every((c) => c.popular)) {
     throw new Error("popularEtherscanChains returned non-popular");
+  }
+  for (const id of [81457, 5000, 204, 999]) {
+    if (getEtherscanChain(id)?.popular) {
+      throw new Error(`chain ${id} should not be popular/default`);
+    }
   }
   const more = moreEtherscanChains();
   if (more.some((c) => c.popular)) {
@@ -38,7 +45,6 @@ import {
 }
 
 {
-  // No Solana / non-EVM
   if (ETHERSCAN_CHAINS.some((c) => /solana/i.test(c.name))) {
     throw new Error("Solana must not be in Etherscan chains");
   }
@@ -57,24 +63,31 @@ import {
 {
   const def = defaultWalletChainIds();
   const all = allEtherscanChainIds();
+  const pop = popularEtherscanChains().map((c) => c.id);
   if (all.length !== ETHERSCAN_CHAINS.length) {
     throw new Error("allEtherscanChainIds length mismatch");
   }
-  if (def.join(",") !== all.join(",")) {
-    throw new Error("defaults should be all Etherscan V2 mainnets");
+  if (def.join(",") !== pop.join(",")) {
+    throw new Error("defaults should match popular majors");
   }
-  if (!def.includes(1) || !def.includes(8453)) {
-    throw new Error("defaults should include Ethereum + Base");
+  if (def.length === all.length) {
+    throw new Error("defaults must not be all Etherscan chains");
+  }
+  if (!def.includes(1) || !def.includes(8453) || !def.includes(42161)) {
+    throw new Error("defaults should include Ethereum + Base + Arbitrum");
+  }
+  if (def.includes(81457) || def.includes(5000)) {
+    throw new Error("defaults should skip Blast/Mantle");
   }
 
   const resolvedEmpty = resolveWalletChainIds([]);
-  if (resolvedEmpty.join(",") !== all.join(",")) {
-    throw new Error("empty chainIds should fall back to all chains");
+  if (resolvedEmpty.join(",") !== def.join(",")) {
+    throw new Error("empty chainIds should fall back to major defaults");
   }
 
   const resolvedNull = resolveWalletChainIds(null);
-  if (resolvedNull.join(",") !== all.join(",")) {
-    throw new Error("null chainIds should fall back to all chains");
+  if (resolvedNull.join(",") !== def.join(",")) {
+    throw new Error("null chainIds should fall back to major defaults");
   }
 
   const resolved = resolveWalletChainIds([1, 1, 99999, 8453]);
@@ -93,5 +106,5 @@ import {
 }
 
 console.log(
-  `etherscan-chains checks ok (${ETHERSCAN_CHAINS.length} mainnets, ${popularEtherscanChains().length} popular)`,
+  `etherscan-chains checks ok (${ETHERSCAN_CHAINS.length} mainnets, ${popularEtherscanChains().length} default majors)`,
 );

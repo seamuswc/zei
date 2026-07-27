@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchLiveWalletTxs } from "@/lib/import/wallet-live";
 import {
   allEtherscanChainIds,
+  defaultWalletChainIds,
   resolveWalletChainIds,
 } from "@/lib/import/etherscan-chains";
 import { EnsResolveError } from "@/lib/ens";
@@ -38,7 +39,11 @@ function ensErrorKey(code: EnsResolveError["code"]): ApiMsgKey {
   }
 }
 
-/** Default (no body fields) and `allChains: true` → every Etherscan V2 mainnet. */
+/**
+ * `allChains: true` → every Etherscan V2 mainnet.
+ * Explicit `chainIds` / `chainId` → those ids (unknown dropped).
+ * Otherwise → Ethereum + major L2s (not all 33).
+ */
 function parseChainIds(body: {
   chainId?: unknown;
   chainIds?: unknown;
@@ -56,8 +61,7 @@ function parseChainIds(body: {
       .filter((n) => Number.isFinite(n));
     return resolveWalletChainIds(ids);
   }
-  // Same address on all EVM chains — sync everything unless limited.
-  return allEtherscanChainIds();
+  return defaultWalletChainIds();
 }
 
 export async function POST(req: Request) {
