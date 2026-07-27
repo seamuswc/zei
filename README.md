@@ -101,63 +101,47 @@ Copy `.env.example` → `.env.local` and fill in.
 
 ---
 
-## Production ops (droplet)
+## Ops / payments
 
-App path: `/var/www/zei` · process: `pm2` name `zei` · SQLite: `data/zei.db`.
+No admin UI — SSH + scripts only.
+
+| | |
+|--|--|
+| SSH | `ssh root@167.71.217.5` |
+| App | `/var/www/zei` · pm2 `zei` |
+| DB | `data/zei.db` |
+| Support (footer) | `seamus@cryptozei.com` |
+| OPS alerts | `OPS_ALERT_EMAIL` → `seamuswconnolly@gmail.com` (never support) |
+
+```bash
+cd /var/www/zei
+
+# Lookup
+node scripts/lookup-payment.mjs <email|paymentId|txHash>
+
+# Mark refunded (exit 1 if already refunded; email with multiple hits → use paymentId)
+node scripts/mark-refunded.mjs <paymentId|txHash|email> [--note "..."]
+
+# List finished payments (optional)
+sqlite3 data/zei.db "SELECT p.id, u.email, p.status, p.tx_hash, p.refunded_at, p.created_at FROM payments p JOIN users u ON u.id = p.user_id WHERE p.status = 'finished' ORDER BY p.created_at DESC LIMIT 50;"
+
+# OPS alerts (cron hourly → OPS Gmail only)
+node scripts/ops-alerts.mjs           # live
+node scripts/ops-alerts.mjs --dry-run
+# 0 * * * * cd /var/www/zei && /usr/bin/node scripts/ops-alerts.mjs >> /var/log/zei-ops-alerts.log 2>&1
+```
+
+Alerts cover daily signups, user milestones, Etherscan/CoinGecko credit pressure, scale soft advice. Needs `RESEND_API_KEY`, `EMAIL_FROM`, API keys; optional `OPS_ALERT_EMAIL` (forced to ops Gmail).
 
 ### Database backup
 
 ```bash
-# On the server (once)
 sudo mkdir -p /var/backups/zei
 sudo cp /var/www/zei/scripts/backup-db.sh /usr/local/bin/zei-backup-db.sh
 sudo chmod +x /usr/local/bin/zei-backup-db.sh
-
-# Daily 03:15 UTC — keep 14 days
-sudo crontab -e
-# add:
+# cron daily 03:15 UTC:
 # 15 3 * * * ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /usr/local/bin/zei-backup-db.sh
 ```
-
-Manual run: `ZEI_DB=/var/www/zei/data/zei.db ZEI_BACKUP_DIR=/var/backups/zei /usr/local/bin/zei-backup-db.sh`
-
-### Ops alert emails
-
-Hourly script emails **only** `seamuswconnolly@gmail.com` (never `seamus@cryptozei.com`) via Resend when:
-
-- **Daily signups ≥ 10** (Asia/Tokyo day) — once per calendar day  
-- **Total users** crosses 100 / 200 / 300 … (state in `data/ops-alerts-state.json`)  
-- **Etherscan** credits low (&lt; 15% or &lt; 10 000 remaining) and/or **time to upgrade** (used ≥ 70% of daily limit or available &lt; 30 000) — Lite→Standard; urgent if used ≥ 90% — debounced 12h (low+upgrade merged into one email)  
-- **CoinGecko** credits low and/or remaining monthly &lt; 20% (Basic→higher) — skip if `/key` fails — debounced 12h (merged)  
-- **Scale soft advice** — total users ≥ 200 or daily signups ≥ 20 — consider larger droplet / watch sync concurrency — debounced 24h  
-
-```bash
-# From /var/www/zei
-node scripts/ops-alerts.mjs           # live
-node scripts/ops-alerts.mjs --dry-run # no email / no state write
-
-# Cron (hourly, root crontab)
-# 0 * * * * cd /var/www/zei && /usr/bin/node scripts/ops-alerts.mjs >> /var/log/zei-ops-alerts.log 2>&1
-```
-
-Needs `.env.local`: `RESEND_API_KEY`, `EMAIL_FROM`, `ETHERSCAN_API_KEY`, `COINGECKO_API_KEY`, optional `OPS_ALERT_EMAIL` (forced to ops Gmail).
-
-### Pro payment lookup & refunds
-
-SQLite `payments.refunded_at` (ISO timestamp) prevents double-marking a refund. Optional `refund_note` for a short ops note.
-
-```bash
-# From /var/www/zei
-node scripts/lookup-payment.mjs user@example.com
-node scripts/lookup-payment.mjs <paymentId>
-node scripts/lookup-payment.mjs 0xabc123...   # tx hash
-
-# Mark refunded once (refuses if already refunded — exit 1)
-node scripts/mark-refunded.mjs <paymentId|txHash|email>
-node scripts/mark-refunded.mjs <paymentId> --note "chargeback 2026-07-27"
-```
-
-If email matches more than one finished non-refunded payment, the mark script refuses — use `payment_id` from lookup. When that payment is the user’s only active finished Pro unlock and `plan=pro`, the script sets plan back to free.
 
 ---
 
