@@ -8,6 +8,7 @@ import { WALLET_HISTORY_TRUNCATED_KEY } from "@/lib/import/wallet-sync-ui";
 import { txNeedsPrice, txNeedsReview } from "@/lib/tax/price-quality";
 import { usePortfolio } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
+import { RemoveDustButton } from "./RemoveDustButton";
 
 const SIDES: TxSide[] = [
   "buy",
@@ -252,6 +253,8 @@ export function ReviewLedger() {
           </p>
         )}
       </div>
+
+      <RemoveDustButton className="dust-remove--ledger" />
 
       <div className="ledger-toolbar">
         <div className="ledger-toolbar__select">

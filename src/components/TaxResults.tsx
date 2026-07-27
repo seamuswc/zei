@@ -14,6 +14,7 @@ import {
 import { usePortfolio, useTaxSummary } from "./PortfolioProvider";
 import { useI18n } from "./I18nProvider";
 import { useAuth } from "./AuthProvider";
+import { RemoveDustButton } from "./RemoveDustButton";
 import type { MessageKey } from "@/lib/i18n/messages";
 
 export function TaxResults() {
@@ -313,6 +314,8 @@ export function TaxResults() {
           </button>
         </div>
       </div>
+
+      <RemoveDustButton className="dust-remove--results" />
 
       <div
         className={`split-tables${locked ? " is-blurred" : ""}`}
