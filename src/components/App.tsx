@@ -113,12 +113,12 @@ function AppShell() {
               </div>
             </section>
 
-            <IncomeProfile />
             <div id="export">
               <TaxResults />
             </div>
             <TaxYearsPanel />
             <ReviewLedger />
+            <IncomeProfile />
           </main>
 
           <footer className="footer">

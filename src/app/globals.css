@@ -774,8 +774,12 @@ select {
   color: var(--ink-soft);
 }
 
+.income {
+  text-align: center;
+}
+
 .income__intro {
-  margin-bottom: 1.5rem;
+  margin: 0 auto 1.5rem;
   max-width: 54ch;
 }
 
@@ -805,10 +809,21 @@ select {
 }
 
 .income__simple {
+  margin-inline: auto;
   padding: 1.25rem;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
   max-width: 560px;
+  text-align: center;
+}
+
+.income__simple .field {
+  align-items: center;
+  text-align: center;
+}
+
+.income__simple .field input {
+  text-align: center;
 }
 
 .estimate__export {
